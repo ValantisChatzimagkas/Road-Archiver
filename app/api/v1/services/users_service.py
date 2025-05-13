@@ -40,6 +40,25 @@ async def get_user_by_id(db: Session, user_id: int):
         )
 
 
+async def delete_user(db: Session, user_id: int):
+    try:
+        user = db.query(User).filter_by(id=user_id).first()
+
+        if not user:
+            raise HTTPException(detail="User not found", status_code=status.HTTP_404_NOT_FOUND)
+
+        db.delete(user)
+        db.commit()
+        return {"detail": "User deleted successfully"}
+
+    except SQLAlchemyError:
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal error occurred"
+        )
+
+
 # for now, I use this for authenticating users, does not get used by a respective endpoint
 async def get_user_by_email(db: Session, user_email: EmailStr):
     try:
