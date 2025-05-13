@@ -17,3 +17,9 @@ async def create_user(request: CreateUser, db: Session = Depends(get_db)):
 async def get_user(id: int, db: Session = Depends(get_db)):
     user = await users_service.get_user_by_id(user_id=id, db=db)
     return user
+
+
+@router.delete("/{id}")
+async def delete_user(id:int, db: Session = Depends(get_db)):
+    result = await users_service.delete_user(db=db, user_id=id)
+    return result
