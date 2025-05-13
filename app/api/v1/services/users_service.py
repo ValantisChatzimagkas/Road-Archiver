@@ -2,6 +2,8 @@ from fastapi import HTTPException, status
 from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+
+from app.core.security import Hasher
 from app.db.models import User
 from app.schemas import CreateUser
 
@@ -11,7 +13,7 @@ async def create_user(db: Session, request: CreateUser):
         new_user = User(
             username=request.username,
             email=request.email,
-            hashed_password=request.hashed_password
+            hashed_password= Hasher.hash_password(request.hashed_password)
         )
 
         db.add(new_user)
