@@ -1,0 +1,8 @@
+[default]
+DB_HOST = "localhost"
+DB_PORT = 5432
+DB_USER = "demo_user"
+DB_PASSWORD = "demo_password"
+DB_NAME = "roadnetworks"
+
+JWT_SECRET_KEY = "fd2ec0e2de2ca91e3d22aeb65e3be8bfb5f4264acaa9bd35d5ca5a4e0e98b988"
