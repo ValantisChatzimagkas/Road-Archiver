@@ -8,6 +8,7 @@ class CreateUser(BaseModel):
     username: str
     email: EmailStr
     hashed_password: str
+    role: UserRolesOptions
 
 
 class ReadUser(BaseModel):
