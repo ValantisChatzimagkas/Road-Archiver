@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from fastapi import UploadFile, File, HTTPException, status
 from fastapi.responses import JSONResponse
 from shapely.geometry.geo import mapping
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from app.db.models import RoadEdge, User, RoadNetwork, UserRolesOptions
@@ -12,6 +13,7 @@ from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import shape
 
 
+# HELPERS
 async def normalize_lanes(value):
     """Normalize lanes value to a string."""
     if isinstance(value, list):
@@ -60,6 +62,47 @@ async def create_road_edge(feature: Dict, network_id: int, current_user_id: int)
     )
 
 
+async def mark_edges_as_not_current(db, network_id):
+    """Mark all current edges in the network as not current."""
+    db.query(RoadEdge).filter(
+        and_(RoadEdge.network_id == network_id, RoadEdge.is_current == True)
+    ).update({"is_current": False})
+
+
+async def build_updated_edge(feature, network_id, current_user_id):
+    """Build a new edge from a GeoJSON feature."""
+    geom = shape(feature["geometry"])
+    geom_pg = from_shape(geom, srid=4326)
+
+    properties = feature.get("properties", {})
+
+    lanes_value = await normalize_lanes(properties.get("lanes"))
+    width_value = await normalize_width(properties.get("width"))
+
+    fields = {"name", "ref", "oneway", "length", "tunnel"}
+
+    edge = RoadEdge(
+        geometry=geom_pg,
+        name=properties.get("name"),
+        ref=properties.get("ref"),
+        lanes=lanes_value,
+        oneway=properties.get("oneway"),
+        length=properties.get("length"),
+        width=width_value,
+        tunnel=properties.get("tunnel"),
+        extra_properties={
+            k: v for k, v in properties.items()
+            if k not in fields.union({"lanes", "width"})
+        },
+        is_current=True,
+        timestamp=datetime.now(UTC),
+        network_id=network_id,
+        user_id=current_user_id
+    )
+    return edge
+
+
+# ENDPOINT HANDLERS
 async def upload_road_network(db: Session, current_user: User, file: UploadFile = File(...)):
     try:
         content = file.file.read()
@@ -147,3 +190,42 @@ async def get_network(db: Session,
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred"
         )
+
+
+async def update_network_from_file(db: Session,
+                                   current_user: User,
+                                   network_id: int,
+                                   file: UploadFile = File(...)
+                                   ):
+    try:
+        current_user_id = current_user.id
+
+        if current_user.role == UserRolesOptions.ADMIN:
+            network = db.query(RoadNetwork).filter_by(id=network_id).first()
+        else:
+            network = db.query(RoadNetwork).filter_by(
+                id=network_id,
+                user_id=current_user_id
+            ).first()
+
+        if network is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Network not found")
+
+        content = await file.read()
+        geojson_data = json.loads(content)
+        current_user_id = current_user_id
+
+        features = geojson_data.get("features", [])
+
+        if features:
+            await mark_edges_as_not_current(db, network_id)
+
+        new_features = [await build_updated_edge(feature, network_id, current_user_id) for feature in features]
+        db.bulk_save_objects(new_features)
+        db.commit()
+        return {"message": "Network updated successfully", "network_id": network.id}
+
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Update failed: {str(e)}")

@@ -47,3 +47,14 @@ async def get_network(network_id: int,
         db=db, current_user=current_user, network_id=network_id, timestamp=timestamp
     )
     return network
+
+@router.post("/networks/{network_id}/update")
+async def update_network_from_file(network_id: int,
+                                   db: Session = Depends(get_db),
+                                   current_user: User = Depends(get_current_user),
+                                   file: UploadFile = File(...)
+                                   ):
+    result = await road_network_service.update_network_from_file(db=db,
+                                                                 current_user=current_user,
+                                                                 network_id=network_id, file=file)
+    return result
