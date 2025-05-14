@@ -44,6 +44,6 @@ async def get_network(network_id: int,
                       current_user: User = Depends(get_current_user)
                       ):
     network = await road_network_service.get_network(
-        db=db, current_user=current_user, network_id=network_id
+        db=db, current_user=current_user, network_id=network_id, timestamp=timestamp
     )
     return network
