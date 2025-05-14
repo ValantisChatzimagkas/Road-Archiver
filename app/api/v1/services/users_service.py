@@ -62,12 +62,13 @@ async def delete_user(db: Session, user_id: int):
 
 
 # for now, I use this for authenticating users, does not get used by a respective endpoint
-async def get_user_by_email(db: Session, user_email: EmailStr):
+async def get_user_by_email(db: Session, email: EmailStr):
     try:
-        user = db.query(User).filter_by(email=user_email)
+        user =  db.query(User).filter_by(email=email).first()
 
         if not user:
-            raise HTTPException(detail="User not found", status_code=status.HTTP_404_NOT_FOUND)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        return user
 
     except SQLAlchemyError as e:
 
