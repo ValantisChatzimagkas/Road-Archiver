@@ -32,6 +32,8 @@ class User(Base):
     role = Column(SqlEnum(UserRolesOptions), default=UserRolesOptions.USER, nullable=False)
 
     networks = relationship("RoadNetwork", back_populates="user")
+    edges = relationship("RoadEdge", back_populates="user")
+
 
 
 class RoadNetwork(Base):
