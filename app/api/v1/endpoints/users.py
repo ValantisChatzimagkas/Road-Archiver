@@ -16,8 +16,8 @@ async def create_user(request: CreateUser, db: Session = Depends(get_db)):
 
 
 @router.get("/{id}", response_model=ReadUser)
-async def get_user(id: int, db: Session = Depends(get_db)):
-    user = await users_service.get_user_by_id(user_id=id, db=db)
+async def get_user(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user = await users_service.get_user_by_id(user_id=id, db=db, current_user=current_user)
     return user
 
 
