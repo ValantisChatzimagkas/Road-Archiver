@@ -1,10 +1,11 @@
 from fastapi import HTTPException, status
+from httpx import request
 from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.security import Hasher
-from app.db.models import User
+from app.db.models import User, UserRolesOptions
 from app.schemas import CreateUser
 
 
@@ -13,7 +14,8 @@ async def create_user(db: Session, request: CreateUser):
         new_user = User(
             username=request.username,
             email=request.email,
-            hashed_password= Hasher.hash_password(request.hashed_password)
+            hashed_password= Hasher.hash_password(request.hashed_password),
+            role=request.role
         )
 
         db.add(new_user)
@@ -25,9 +27,13 @@ async def create_user(db: Session, request: CreateUser):
         raise Exception(f"Failed to create user, {e}")
 
 
-async def get_user_by_id(db: Session, user_id: int):
+async def get_user_by_id(db: Session, user_id: int, current_user: User):
     try:
         user = db.query(User).filter_by(id=user_id).first()
+
+        if current_user.role != UserRolesOptions.ADMIN.value and current_user.id != user.id:
+            raise HTTPException(detail="Action not permitted", status_code=status.HTTP_401_UNAUTHORIZED)
+
 
         if not user:
             raise HTTPException(detail="User not found", status_code=status.HTTP_404_NOT_FOUND)
@@ -44,7 +50,11 @@ async def get_user_by_id(db: Session, user_id: int):
 
 async def delete_user(db: Session, user_id: int):
     try:
+
         user = db.query(User).filter_by(id=user_id).first()
+
+        if user.role != UserRolesOptions.ADMIN:
+            raise HTTPException(detail="Action not permitted", status_code=status.HTTP_401_UNAUTHORIZED)
 
         if not user:
             raise HTTPException(detail="User not found", status_code=status.HTTP_404_NOT_FOUND)
