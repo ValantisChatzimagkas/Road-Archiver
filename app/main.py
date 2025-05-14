@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from app.core.database import engine
 from app.db import models
 from app.api.v1.endpoints.users import router as users_router
+from app.api.v1.endpoints.authentication import router as authentication_router
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
@@ -16,6 +17,7 @@ app = FastAPI(title="Road Network Management API",
               version="1.0.0", )
 
 app.include_router(users_router)
+app.include_router(authentication_router)
 
 models.Base.metadata.create_all(engine)
 
