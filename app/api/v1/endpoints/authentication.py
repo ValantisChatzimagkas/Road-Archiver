@@ -12,7 +12,15 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 ACCESS_TOKEN_EXPIRATION_TIME = 1440  # minutes
 
 
-@router.post("/login")
+@router.post("/login",
+             summary="Login endpoint for user login",
+             description="Performs login action and provides access token JWT",
+             responses={
+                 status.HTTP_200_OK: {"description": "Login successful, JWT token returned"},
+                 status.HTTP_401_UNAUTHORIZED: {"description": "Invalid username or password"},
+                 status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Validation error (e.g., missing fields)"},
+             }
+             )
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                 db: Session = Depends(get_db)
                 ) -> Token:
