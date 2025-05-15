@@ -29,12 +29,14 @@ async def create_user(request: CreateUser = Body(...,
 
 @router.get("/{id}", response_model=ReadUser, summary="Get user by id",
             description="""
-             This endpoint has 2 modes. 
+             This endpoint has 2 modes.
              <br>
              <ul>
                 <li> if user is **Admin** then that user can get every user. </li>
                 <li> if user is **User** then this user can retrieve only itself.</li>
              </ul>
+             
+             - Requires authentication.
              """,
             responses={
                 status.HTTP_200_OK: {"description": "Found User"},
@@ -47,7 +49,11 @@ async def get_user(id: int, db: Session = Depends(get_db), current_user: User = 
 
 @router.delete("/{id}",
                summary="Deletes a user",
-               description="Delete a user, in order to user this endpoint, the caller must be an Admin",
+               description="""
+               Delete a user, in order to user this endpoint, the caller must be an Admin.
+               
+               - Requires authentication.
+               """,
                responses={
                    status.HTTP_200_OK: {"description": "User was deleted"},
                    status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"}
