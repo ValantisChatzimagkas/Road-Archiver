@@ -23,4 +23,25 @@ The edges of the road networks should be retrievable via an additional endpoint 
 2. A README.md should document the application and the approach to the task.
 3. The solution must be containerized and readily executable using Docker-Compose.
 
+---
+
+# Getting started - Setup
+**Step 1 - clone project:**
+```bash
+git clone git@github.com:ValantisChatzimagkas/submission-by-chrysovalantis-chatzimagkas.git
+```
+
+**Step 2 - build and run project with docker-compose:**
+```
+docker compose up --build
+```
+
+**Step 3 -  check the documentation**
+If everything went ok you can go to the home page at: [http://127.0.0.1:8000/](http://127.0.0.1:8000/) and there click the **Docs** link<br>
+Or you can directly access them from here: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+
+
+
+
 
