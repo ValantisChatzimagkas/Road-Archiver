@@ -1,9 +1,7 @@
 from fastapi import HTTPException, status
-from httpx import request
 from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-
 from app.core.security import Hasher
 from app.db.models import User, UserRolesOptions
 from app.schemas import CreateUser
