@@ -27,7 +27,7 @@ def parse_width(value):
         raise ValueError(f"Invalid width value: {value}")
 
 
-@router.post("/networks/upload",
+@router.post("/upload",
              summary="Upload a new road network file",
              description="""
              Uploads a road network file, in geojson format.
@@ -51,7 +51,7 @@ async def upload_road_network(
     return {"message": "File Uploaded"}
 
 
-@router.get("/networks/{network_id}/edges",
+@router.get("/{network_id}/edges",
             summary="Retrieve road network edges",
             description="""
             Returns the edges of a specific road network by ID.
@@ -78,7 +78,7 @@ async def get_network(network_id: int,
     return network
 
 
-@router.post("/networks/{network_id}/update",
+@router.post("/{network_id}/update",
              summary="Update a road network from a file",
              description="""
              Updates the given road network using a new uploaded file.
