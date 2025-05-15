@@ -14,6 +14,28 @@ from shapely.geometry import shape
 
 
 # HELPERS
+async def validate_uploaded_file(file: UploadFile):
+
+    if not file.filename.endswith(".json") and not file.filename.endswith(".geojson"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension")
+
+    contents = await file.read()
+
+    try:
+        data = json.loads(contents)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON file")
+
+    if not isinstance(data, dict) or "type" not in data:
+        raise HTTPException(status_code=400, detail="Not a valid GeoJSON structure")
+
+
+    if data["type"] not in ["FeatureCollection", "Feature", "Point", "LineString", "Polygon"]:
+        raise HTTPException(status_code=400, detail="Unsupported GeoJSON type")
+
+    return contents
+
+
 async def normalize_lanes(value):
     """Normalize lanes value to a string."""
     if isinstance(value, list):
@@ -105,7 +127,7 @@ async def build_updated_edge(feature, network_id, current_user_id):
 # ENDPOINT HANDLERS
 async def upload_road_network(db: Session, current_user: User, file: UploadFile = File(...)):
     try:
-        content = file.file.read()
+        content = await validate_uploaded_file(file)#file.file.read()
         geojson_data = json.loads(content)
 
         network_name = geojson_data.get("name") or "Unnamed Network"
