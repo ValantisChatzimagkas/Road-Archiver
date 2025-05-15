@@ -12,21 +12,6 @@ from app.db.models import User
 router = APIRouter(prefix="/networks", tags=["Networks"])
 
 
-def parse_width(value):
-    """Normalize 'width' input into float or list of floats"""
-    if value is None:
-        return None
-    if isinstance(value, list):
-        try:
-            return [float(v) for v in value]
-        except ValueError:
-            raise ValueError(f"Invalid width list: {value}")
-    try:
-        return [float(value)]
-    except ValueError:
-        raise ValueError(f"Invalid width value: {value}")
-
-
 @router.post("/upload",
              summary="Upload a new road network file",
              description="""
