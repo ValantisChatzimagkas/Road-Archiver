@@ -60,7 +60,7 @@ class RoadEdge(Base):
     width = Column(ARRAY(Float), nullable=True)
     tunnel = Column(String, nullable=True)
     extra_properties = Column(JSONB, default={})
-    geometry = Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
+    geometry = Column(Geometry(geometry_type='GEOMETRY', srid=4326), nullable=False)
     is_current = Column(Boolean, default=True)  # track historical versions
     timestamp = Column(DateTime(timezone=True), default=datetime.now(UTC), nullable=False)  # Added timestamp field
     network_id = Column(Integer, ForeignKey("road_networks.id"), nullable=False)
