@@ -35,6 +35,14 @@ git clone git@github.com:ValantisChatzimagkas/submission-by-chrysovalantis-chatz
 ```
 docker compose up --build
 ```
+# Tests:
+
+To run all tests go at the root directory and run in the terminal:
+```commandline
+pytest
+```
+
+
 
 **Step 3 -  check the documentation**
 If everything went ok you can go to the home page at: [http://127.0.0.1:8000/](http://127.0.0.1:8000/) and there click the **Docs** link<br>
