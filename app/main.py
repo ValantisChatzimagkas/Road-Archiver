@@ -33,3 +33,7 @@ models.Base.metadata.create_all(engine)
 async def root(request: Request):
     """Homepage."""
     return templates.TemplateResponse("homepage.html", {"request": request})
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
