@@ -77,6 +77,10 @@ async def get_road_networks_for_user(id: int, db: Session = Depends(get_db),
                    status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"}
                }
                )
-async def delete_user(id: int, db: Session = Depends(get_db)):
-    result = await users_service.delete_user(db=db, user_id=id)
+async def delete_user_endpoint(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await users_service.delete_user(db=db, user_id=id, current_user=current_user)
     return result

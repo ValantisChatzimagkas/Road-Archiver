@@ -68,28 +68,19 @@ async def get_road_networks_for_user(db: Session, user_id: int, current_user: Us
         )
 
 
-async def delete_user(db: Session, user_id: int):
-    try:
+async def delete_user(db: Session, user_id: int, current_user: User):
+    user = db.query(User).filter_by(id=user_id).first()
 
-        user = db.query(User).filter_by(id=user_id).first()
+    if not user:
+        raise HTTPException(detail="User not found", status_code=status.HTTP_404_NOT_FOUND)
 
-        if user.role != UserRolesOptions.ADMIN:
-            raise HTTPException(detail="Action not permitted", status_code=status.HTTP_401_UNAUTHORIZED)
 
-        if not user:
-            raise HTTPException(detail="User not found", status_code=status.HTTP_404_NOT_FOUND)
+    if current_user.role != UserRolesOptions.ADMIN:
+        raise HTTPException(detail="Action not permitted", status_code=status.HTTP_401_UNAUTHORIZED)
 
-        db.delete(user)
-        db.commit()
-        return {"detail": "User deleted successfully"}
-
-    except SQLAlchemyError:
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred"
-        )
-
+    db.delete(user)
+    db.commit()
+    return {"detail": "User deleted successfully"}
 
 # for now, I use this for authenticating users, does not get used by a respective endpoint
 async def get_user_by_email(db: Session, email: EmailStr):
