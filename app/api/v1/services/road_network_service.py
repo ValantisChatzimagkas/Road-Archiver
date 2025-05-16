@@ -250,4 +250,4 @@ async def update_network_from_file(db: Session,
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Update failed: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Update failed: {str(e)}")
