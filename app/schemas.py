@@ -38,3 +38,11 @@ class UserAuth(BaseModel):
     id: int
     username: str
     email: EmailStr
+
+# --------- RoadNetworks --------
+class ReadRoadNetwork(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True

@@ -3,7 +3,7 @@ from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from app.core.security import Hasher
-from app.db.models import User, UserRolesOptions
+from app.db.models import User, UserRolesOptions, RoadNetwork
 from app.schemas import CreateUser
 
 
@@ -37,6 +37,28 @@ async def get_user_by_id(db: Session, user_id: int, current_user: User):
             raise HTTPException(detail="User not found", status_code=status.HTTP_404_NOT_FOUND)
 
         return user
+
+    except SQLAlchemyError:
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal error occurred"
+        )
+
+
+async def get_road_networks_for_user(db: Session, user_id: int, current_user: User):
+    try:
+        user = db.query(User).filter_by(id=user_id).first()
+        networks = db.query(RoadNetwork).filter_by(user_id=user_id)
+
+        if current_user.role != UserRolesOptions.ADMIN.value and current_user.id != user.id:
+            raise HTTPException(detail="Action not permitted", status_code=status.HTTP_401_UNAUTHORIZED)
+
+
+        if not networks:
+            return []
+
+        return networks
 
     except SQLAlchemyError:
 
