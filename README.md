@@ -84,11 +84,105 @@ If everything went ok you can go to the home page at: [http://127.0.0.1:8000/](h
 Or you can directly access them from here: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 
+# Getting Started - Interacting with the API
+Here we have a workflow of how one can interact with the API
+
+**Create Account:** 
+<br><br>
+Click endpoint
+![Step 1](screenshots/create_account_step_1.png)
+
+Click on try it out
+![Step 2](screenshots/create_account_step_2.png)
+
+Enter your account details:
+![Step 3](screenshots/create_account_step_3.png)
+
+Create Account:
+![Step 4](screenshots/create_account_step_4.png)
+
+Scroll down and check results:
+![Step 5](screenshots/create_account_step_5.png)
+
+---
+
+**Authenticate**
+We must authenticate ourselves to access some of the endpoints<br>
+To do so, scroll to the top of the documentation page and click here:
+![Step 6](screenshots/authenticate_step_1.png)
 
 
+Fill in here your **email** and **password**
+![Step 7](screenshots/authenticate_step_2.png)
 
 
+Scroll down and click here:
+![Step 8](screenshots/authenticate_step_3.png)
+
+Exit this window:
+![Step 9](screenshots/authenticate_step_4.png)
+
+---
+
+**Upload a road network**
+So if everything was fine so far, lets try to upload a road network.<br>
+Scroll down until you see this, and click here:
+![Step 10](screenshots/Upload_road_network_step_1.png)
+
+Click on try it out
+![Step 11](screenshots/Upload_road_network_step_2.png)
 
 
+Click to browse and upload a road network file, it **must** be a `geojson` or a `json` 
+file that contains geojson data.
+![Step 12](screenshots/Upload_road_network_step_3.png)
 
+Execute the road network upload
+![Step 13](screenshots/Upload_road_network_step_4.png)
 
+Check results:
+![Step 14](screenshots/Upload_road_network_step_5.png)
+
+---
+
+**Update a road network**
+Let's see the road networks our user has so that we can fetch a road network id
+
+Click here
+![Step 15](screenshots/Update_network_step_1.png)
+
+Click on try it out
+![Step 16](screenshots/Update_network_step_2.png)
+
+Enter user id, since it is the first user created in our demo, it has id=1
+![Step 17](screenshots/Update_network_step_3.png)
+
+Click to execute
+![Step 18](screenshots/Update_network_step_4.png)
+
+Observe the results and note down the network_id, which in this case is called id
+![Step 19](screenshots/Update_network_step_5.png)
+
+Click here
+![Step 20](screenshots/Update_network_step_6.png)
+
+Click on try it out
+![Step 21](screenshots/Update_network_step_7.png)
+
+Enter network id, browse file and execute the update
+![Step 22](screenshots/Update_network_step_8.png)
+
+Observe the results
+![Step 23](screenshots/Update_network_step_9.png)
+
+Finally, lets try the endpoint that we use to fetch a road network along with it's edges.
+By now, we covered how and where to click to use an endpoint.
+
+Enter the road network id you wish to fetch, be default if we put only the road network and not timestamp<br>
+We will receive the current version of the network.<br>
+If we provide a timestamp the endpoint will fetch everything from given timestamp and back in the past.
+
+![Step 24](screenshots/Get_road_network_1.png)
+
+Observe the results:
+![Step 25](screenshots/Get_road_network_2.png)
