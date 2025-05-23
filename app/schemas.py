@@ -39,6 +39,7 @@ class UserAuth(BaseModel):
     username: str
     email: EmailStr
 
+
 # --------- RoadNetworks --------
 class ReadRoadNetwork(BaseModel):
     id: int

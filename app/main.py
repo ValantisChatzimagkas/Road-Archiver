@@ -12,15 +12,16 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-app = FastAPI(title="Road Network Management API",
-              description="REST API for managing road networks, uploading, updating and retrieving road networks",
-              version="1.0.0",
-              openapi_tags=[
-                  {"name": "users", "description": "Operations related to users"},
-                  {"name": "authentication", "description": "Login and security"},
-                  {"name": "Networks", "description": "Manage road network data"},
-              ]
-              )
+app = FastAPI(
+    title="Road Network Management API",
+    description="REST API for managing road networks, uploading, updating and retrieving road networks",
+    version="1.0.0",
+    openapi_tags=[
+        {"name": "users", "description": "Operations related to users"},
+        {"name": "authentication", "description": "Login and security"},
+        {"name": "Networks", "description": "Manage road network data"},
+    ],
+)
 
 app.include_router(users_router)
 app.include_router(authentication_router)
@@ -33,6 +34,7 @@ models.Base.metadata.create_all(engine)
 async def root(request: Request):
     """Homepage."""
     return templates.TemplateResponse("homepage.html", {"request": request})
+
 
 @app.get("/health")
 def health_check():

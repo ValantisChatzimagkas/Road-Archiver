@@ -58,7 +58,9 @@ async def create_access_token(data: Dict, expiration_delta: timedelta | None = N
     return encoded_jwt
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session =  Depends(get_db)):
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)
+):
     """
     Implements logic for getting current user
     :param token:
@@ -68,7 +70,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Failed to validate the provided credentials",
-        headers={"WWW-Authenticate": "Bearer"}
+        headers={"WWW-Authenticate": "Bearer"},
     )
 
     try:
@@ -77,7 +79,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
 
         if email is None:
             raise credentials_exception
-        token_data =  TokenData(email=email)
+        token_data = TokenData(email=email)
 
     except InvalidTokenError:
         raise credentials_exception

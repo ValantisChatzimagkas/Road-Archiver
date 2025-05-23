@@ -3,6 +3,7 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
+
 @app.get("/", tags=["Health"])
 async def root():
     """Health check endpoint."""

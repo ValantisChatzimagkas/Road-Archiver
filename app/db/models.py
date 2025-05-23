@@ -18,6 +18,7 @@ class UserRolesOptions(str, Enum):
     USER: Regular authenticated user
     GUEST: Unauthenticated or very limited account
     """
+
     ADMIN = "ADMIN"
     MODERATOR = "MODERATOR"
     USER = "USER"
@@ -28,13 +29,19 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    username: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    username: Mapped[str] = mapped_column(
+        String, unique=True, index=True, nullable=False
+    )
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
 
-    role: Mapped[UserRolesOptions] = mapped_column(SqlEnum(UserRolesOptions), default=UserRolesOptions.USER, nullable=False)
+    role: Mapped[UserRolesOptions] = mapped_column(
+        SqlEnum(UserRolesOptions), default=UserRolesOptions.USER, nullable=False
+    )
 
-    networks: Mapped[List["RoadNetwork"]] = relationship("RoadNetwork", back_populates="user")
+    networks: Mapped[List["RoadNetwork"]] = relationship(
+        "RoadNetwork", back_populates="user"
+    )
     edges: Mapped[List["RoadEdge"]] = relationship("RoadEdge", back_populates="user")
 
 
@@ -43,11 +50,17 @@ class RoadNetwork(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(UTC), nullable=False)
-    user_id: Mapped[[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(UTC), nullable=False
+    )
+    user_id: Mapped[[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="networks")
-    edges: Mapped["RoadEdge"] = relationship("RoadEdge", back_populates="network", cascade="all, delete-orphan")
+    edges: Mapped["RoadEdge"] = relationship(
+        "RoadEdge", back_populates="network", cascade="all, delete-orphan"
+    )
 
 
 class RoadEdge(Base):
@@ -62,11 +75,19 @@ class RoadEdge(Base):
     width: Mapped[Optional[List[float]]] = mapped_column(ARRAY(Float), nullable=True)
     tunnel: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     extra_properties: Mapped[Dict[str, Any]] = mapped_column(JSONB, default={})
-    geometry: Mapped[Dict[str, Any]] = mapped_column(Geometry(geometry_type='GEOMETRY', srid=4326), nullable=False)
+    geometry: Mapped[Dict[str, Any]] = mapped_column(
+        Geometry(geometry_type="GEOMETRY", srid=4326), nullable=False
+    )
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(UTC), nullable=False)
-    network_id: Mapped[int] = mapped_column(Integer, ForeignKey("road_networks.id"), nullable=False)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(UTC), nullable=False
+    )
+    network_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("road_networks.id"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
 
     network: Mapped["RoadNetwork"] = relationship("RoadNetwork", back_populates="edges")
     user: Mapped["User"] = relationship("User", back_populates="edges")

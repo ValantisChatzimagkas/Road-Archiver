@@ -8,7 +8,7 @@ from sqlalchemy import pool, MetaData, inspect
 from alembic import context
 from app.core.config import settings
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.core.database import Base  # adjust path as needed
 
@@ -29,26 +29,57 @@ def include_object(object, name, type_, reflected, compare_to):
     if type_ == "table":
         # Exclude tables from PostGIS and Tiger Geocoder
         postgis_tables = [
-            'spatial_ref_sys', 'geography_columns', 'geometry_columns',
-            'zip_lookup', 'zip_lookup_base', 'zip_lookup_all', 'zip_state', 'zip_state_loc',
-            'county_lookup', 'countysub_lookup', 'cousub_lookup', 'place_lookup',
-            'secondary_unit_lookup', 'street_type_lookup', 'direction_lookup',
-            'state_lookup', 'geocode_settings', 'geocode_settings_default',
-            'loader_platform', 'loader_variables', 'loader_lookuptables',
-            'pagc_gaz', 'pagc_lex', 'pagc_rules',
-            'featnames', 'faces', 'edges', 'addr', 'addrfeat', 'tabblock', 'tract', 'county', 'topology',
-            'zcta5', 'place', 'layer', 'bg', 'state', 'tabblock20', 'cousub'
+            "spatial_ref_sys",
+            "geography_columns",
+            "geometry_columns",
+            "zip_lookup",
+            "zip_lookup_base",
+            "zip_lookup_all",
+            "zip_state",
+            "zip_state_loc",
+            "county_lookup",
+            "countysub_lookup",
+            "cousub_lookup",
+            "place_lookup",
+            "secondary_unit_lookup",
+            "street_type_lookup",
+            "direction_lookup",
+            "state_lookup",
+            "geocode_settings",
+            "geocode_settings_default",
+            "loader_platform",
+            "loader_variables",
+            "loader_lookuptables",
+            "pagc_gaz",
+            "pagc_lex",
+            "pagc_rules",
+            "featnames",
+            "faces",
+            "edges",
+            "addr",
+            "addrfeat",
+            "tabblock",
+            "tract",
+            "county",
+            "topology",
+            "zcta5",
+            "place",
+            "layer",
+            "bg",
+            "state",
+            "tabblock20",
+            "cousub",
         ]
         # Check if name exactly matches any postgis table
         if name in postgis_tables:
             return False
         # Check if name starts with any common prefixes
-        for prefix in ['tiger_', 'tiger.', 'topology.', 'layer_']:
+        for prefix in ["tiger_", "tiger.", "topology.", "layer_"]:
             if name.startswith(prefix):
                 return False
 
     # Exclude specific schemas
-    if hasattr(object, 'schema') and object.schema in ('tiger', 'topology', 'postgis'):
+    if hasattr(object, "schema") and object.schema in ("tiger", "topology", "postgis"):
         return False
 
     return True

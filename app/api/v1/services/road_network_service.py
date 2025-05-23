@@ -15,9 +15,10 @@ from shapely.geometry import shape
 
 # HELPERS
 async def validate_uploaded_file(file: UploadFile):
-
     if not file.filename.endswith(".json") and not file.filename.endswith(".geojson"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension"
+        )
 
     contents = await file.read()
 
@@ -29,8 +30,13 @@ async def validate_uploaded_file(file: UploadFile):
     if not isinstance(data, dict) or "type" not in data:
         raise HTTPException(status_code=400, detail="Not a valid GeoJSON structure")
 
-
-    if data["type"] not in ["FeatureCollection", "Feature", "Point", "LineString", "Polygon"]:
+    if data["type"] not in [
+        "FeatureCollection",
+        "Feature",
+        "Point",
+        "LineString",
+        "Polygon",
+    ]:
         raise HTTPException(status_code=400, detail="Unsupported GeoJSON type")
 
     return contents
@@ -60,7 +66,9 @@ async def normalize_width(value):
     return None
 
 
-async def create_road_edge(feature: Dict, network_id: int, current_user_id: int) -> RoadEdge:
+async def create_road_edge(
+    feature: Dict, network_id: int, current_user_id: int
+) -> RoadEdge:
     geometry = from_shape(shape(feature.get("geometry")), srid=4326)
     properties = feature.get("properties", {})
 
@@ -80,7 +88,7 @@ async def create_road_edge(feature: Dict, network_id: int, current_user_id: int)
         extra_properties={k: v for k, v in properties.items() if k not in known_fields},
         is_current=True,
         network_id=network_id,
-        user_id=current_user_id
+        user_id=current_user_id,
     )
 
 
@@ -113,30 +121,31 @@ async def build_updated_edge(feature, network_id, current_user_id):
         width=width_value,
         tunnel=properties.get("tunnel"),
         extra_properties={
-            k: v for k, v in properties.items()
+            k: v
+            for k, v in properties.items()
             if k not in fields.union({"lanes", "width"})
         },
         is_current=True,
         timestamp=datetime.now(UTC),
         network_id=network_id,
-        user_id=current_user_id
+        user_id=current_user_id,
     )
     return edge
 
 
 # ENDPOINT HANDLERS
-async def upload_road_network(db: Session, current_user: User, file: UploadFile = File(...)):
+async def upload_road_network(
+    db: Session, current_user: User, file: UploadFile = File(...)
+):
     try:
-        content = await validate_uploaded_file(file)#file.file.read()
+        content = await validate_uploaded_file(file)  # file.file.read()
         geojson_data = json.loads(content)
 
         network_name = geojson_data.get("name") or "Unnamed Network"
         timestamp = geojson_data.get("timestamp", datetime.now(UTC))
 
         network = RoadNetwork(
-            name=network_name,
-            timestamp=timestamp,
-            user_id=current_user.id
+            name=network_name, timestamp=timestamp, user_id=current_user.id
         )
         db.add(network)
         db.flush()
@@ -156,28 +165,30 @@ async def upload_road_network(db: Session, current_user: User, file: UploadFile 
     except Exception as e:
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Upload failed: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Upload failed: {str(e)}"
         )
 
 
-async def get_network(db: Session,
-                      current_user: User,
-                      network_id: int,
-                      timestamp: Optional[datetime] = None
-                      ):
+async def get_network(
+    db: Session,
+    current_user: User,
+    network_id: int,
+    timestamp: Optional[datetime] = None,
+):
     try:
-
         if current_user.role == UserRolesOptions.ADMIN:
             network = db.query(RoadNetwork).filter_by(id=network_id).first()
         else:
-            network = db.query(RoadNetwork).filter_by(
-                id=network_id,
-                user_id=current_user.id
-            ).first()
+            network = (
+                db.query(RoadNetwork)
+                .filter_by(id=network_id, user_id=current_user.id)
+                .first()
+            )
 
         if network is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Network not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Network not found"
+            )
 
         query = db.query(RoadEdge).filter(RoadEdge.network_id == network_id)
 
@@ -198,8 +209,8 @@ async def get_network(db: Session,
                 "properties": {
                     "id": edge.id,
                     "timestamp": edge.timestamp.isoformat(),
-                    "is_current": edge.is_current
-                }
+                    "is_current": edge.is_current,
+                },
             }
             for edge in edges
         ]
@@ -207,31 +218,31 @@ async def get_network(db: Session,
         return JSONResponse(content={"type": "FeatureCollection", "features": features})
 
     except SQLAlchemyError as e:
-
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred"
+            detail="An internal error occurred",
         )
 
 
-async def update_network_from_file(db: Session,
-                                   current_user: User,
-                                   network_id: int,
-                                   file: UploadFile = File(...)
-                                   ):
+async def update_network_from_file(
+    db: Session, current_user: User, network_id: int, file: UploadFile = File(...)
+):
     try:
         current_user_id = current_user.id
 
         if current_user.role == UserRolesOptions.ADMIN:
             network = db.query(RoadNetwork).filter_by(id=network_id).first()
         else:
-            network = db.query(RoadNetwork).filter_by(
-                id=network_id,
-                user_id=current_user_id
-            ).first()
+            network = (
+                db.query(RoadNetwork)
+                .filter_by(id=network_id, user_id=current_user_id)
+                .first()
+            )
 
         if network is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Network not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Network not found"
+            )
 
         content = await file.read()
         geojson_data = json.loads(content)
@@ -242,12 +253,16 @@ async def update_network_from_file(db: Session,
         if features:
             await mark_edges_as_not_current(db, network_id)
 
-        new_features = [await build_updated_edge(feature, network_id, current_user_id) for feature in features]
+        new_features = [
+            await build_updated_edge(feature, network_id, current_user_id)
+            for feature in features
+        ]
         db.bulk_save_objects(new_features)
         db.commit()
         return {"message": "Network updated successfully", "network_id": network.id}
 
-
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Update failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Update failed: {str(e)}"
+        )
