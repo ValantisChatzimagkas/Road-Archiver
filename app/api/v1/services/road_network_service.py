@@ -1,16 +1,16 @@
-from datetime import datetime, UTC
 import json
-from typing import Dict, Optional
+from datetime import UTC, datetime
 
-from fastapi import UploadFile, File, HTTPException, status
+from fastapi import File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
+from geoalchemy2.shape import from_shape, to_shape
+from shapely.geometry import shape
 from shapely.geometry.geo import mapping
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from app.db.models import RoadEdge, User, RoadNetwork, UserRolesOptions
-from geoalchemy2.shape import from_shape, to_shape
-from shapely.geometry import shape
+
+from app.db.models import RoadEdge, RoadNetwork, User, UserRolesOptions
 
 
 # HELPERS
@@ -67,7 +67,7 @@ async def normalize_width(value):
 
 
 async def create_road_edge(
-    feature: Dict, network_id: int, current_user_id: int
+    feature: dict, network_id: int, current_user_id: int
 ) -> RoadEdge:
     geometry = from_shape(shape(feature.get("geometry")), srid=4326)
     properties = feature.get("properties", {})
@@ -173,7 +173,7 @@ async def get_network(
     db: Session,
     current_user: User,
     network_id: int,
-    timestamp: Optional[datetime] = None,
+    timestamp: datetime | None = None,
 ):
     try:
         if current_user.role == UserRolesOptions.ADMIN:
@@ -217,7 +217,7 @@ async def get_network(
 
         return JSONResponse(content={"type": "FeatureCollection", "features": features})
 
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",

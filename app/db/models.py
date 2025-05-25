@@ -1,12 +1,12 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Boolean, Float
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -39,10 +39,10 @@ class User(Base):
         SqlEnum(UserRolesOptions), default=UserRolesOptions.USER, nullable=False
     )
 
-    networks: Mapped[List["RoadNetwork"]] = relationship(
+    networks: Mapped[list["RoadNetwork"]] = relationship(
         "RoadNetwork", back_populates="user"
     )
-    edges: Mapped[List["RoadEdge"]] = relationship("RoadEdge", back_populates="user")
+    edges: Mapped[list["RoadEdge"]] = relationship("RoadEdge", back_populates="user")
 
 
 class RoadNetwork(Base):
@@ -67,15 +67,15 @@ class RoadEdge(Base):
     __tablename__ = "road_edges"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    ref: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    lanes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    oneway: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    length: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    width: Mapped[Optional[List[float]]] = mapped_column(ARRAY(Float), nullable=True)
-    tunnel: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    extra_properties: Mapped[Dict[str, Any]] = mapped_column(JSONB, default={})
-    geometry: Mapped[Dict[str, Any]] = mapped_column(
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
+    ref: Mapped[str | None] = mapped_column(String, nullable=True)
+    lanes: Mapped[str | None] = mapped_column(String, nullable=True)
+    oneway: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    length: Mapped[float | None] = mapped_column(Float, nullable=True)
+    width: Mapped[list[float] | None] = mapped_column(ARRAY(Float), nullable=True)
+    tunnel: Mapped[str | None] = mapped_column(String, nullable=True)
+    extra_properties: Mapped[dict[str, Any]] = mapped_column(JSONB, default={})
+    geometry: Mapped[dict[str, Any]] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=4326), nullable=False
     )
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)

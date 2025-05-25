@@ -1,12 +1,12 @@
-from typing import List
 
-from fastapi import APIRouter, Depends, Body, Response, status
+from fastapi import APIRouter, Body, Depends, status
 from sqlalchemy.orm import Session
+
 from app.api.v1.services import users_service
 from app.api.v1.services.authentication_service import get_current_user
 from app.core.database import get_db
 from app.db.models import User, UserRolesOptions
-from app.schemas import CreateUser, ReadUser, ReadRoadNetwork
+from app.schemas import CreateUser, ReadRoadNetwork, ReadUser
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -66,7 +66,7 @@ async def get_user(
 
 @router.get(
     "/{id}/networks",
-    response_model=List[ReadRoadNetwork],
+    response_model=list[ReadRoadNetwork],
     summary="Get road networks for user",
     description="""
              This endpoint will retrieve all the road networks that are associated to a user.

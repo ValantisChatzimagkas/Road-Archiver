@@ -1,7 +1,5 @@
-import datetime
-from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
 
 from app.db.models import UserRolesOptions
 
@@ -31,7 +29,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    email: Optional[str] = None
+    email: str | None = None
 
 
 class UserAuth(BaseModel):

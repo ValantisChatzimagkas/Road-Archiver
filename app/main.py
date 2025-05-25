@@ -1,12 +1,14 @@
 import os
-from fastapi.templating import Jinja2Templates
+
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
-from app.core.database import engine
-from app.db import models
-from app.api.v1.endpoints.users import router as users_router
+from fastapi.templating import Jinja2Templates
+
 from app.api.v1.endpoints.authentication import router as authentication_router
 from app.api.v1.endpoints.road_networks import router as road_networks_router
+from app.api.v1.endpoints.users import router as users_router
+from app.core.database import engine
+from app.db import models
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")

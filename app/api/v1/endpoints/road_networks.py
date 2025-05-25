@@ -1,12 +1,11 @@
 from datetime import datetime
-from typing import Optional
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.api.v1.services import road_network_service
 from app.api.v1.services.authentication_service import get_current_user
 from app.core.database import get_db
-from app.api.v1.services import road_network_service
 from app.db.models import User
 
 router = APIRouter(prefix="/networks", tags=["Networks"])
@@ -58,7 +57,7 @@ async def upload_road_network(
 )
 async def get_network(
     network_id: int,
-    timestamp: Optional[datetime] = None,
+    timestamp: datetime | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

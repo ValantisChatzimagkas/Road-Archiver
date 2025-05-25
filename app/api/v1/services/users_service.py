@@ -2,8 +2,9 @@ from fastapi import HTTPException, status
 from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+
 from app.core.security import Hasher
-from app.db.models import User, UserRolesOptions, RoadNetwork
+from app.db.models import RoadNetwork, User, UserRolesOptions
 from app.schemas import CreateUser
 
 
@@ -105,7 +106,7 @@ async def get_user_by_email(db: Session, email: EmailStr):
             )
         return user
 
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
