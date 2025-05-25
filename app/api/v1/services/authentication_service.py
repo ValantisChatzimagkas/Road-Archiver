@@ -1,20 +1,20 @@
-from datetime import timedelta, datetime, UTC
-from typing import Dict
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
+
 import jwt
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
-from typing import Annotated
-from fastapi import HTTPException, status
+
+from app.api.v1.services.users_service import get_user_by_email
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.security import Hasher
 from app.db.models import User
 from app.schemas import TokenData
-from app.api.v1.services.users_service import get_user_by_email
-from app.core.security import Hasher
 
-SECRET_KEY = settings.JWT_SECRET_KEY
+SECRET_KEY = settings.jwt_secret_key
 ALGORITHM = "HS256"
 EXPIRATION_THRESHOLD = 30  # minutes
 
@@ -39,7 +39,7 @@ async def authenticate_user(email: str, password: str, db: Session = Depends(get
     return user
 
 
-async def create_access_token(data: Dict, expiration_delta: timedelta | None = None):
+async def create_access_token(data: dict, expiration_delta: timedelta | None = None):
     """
     Generates JWT access token
     :param data:
