@@ -1,12 +1,14 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.v1.services import road_network_service
 from app.api.v1.services.authentication_service import get_current_user
 from app.core.database import get_db
 from app.db.models import User
+from app.schemas import NetworkUpdateResponse
 
 router = APIRouter(prefix="/networks", tags=["Networks"])
 
@@ -33,11 +35,13 @@ async def upload_road_network(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> JSONResponse:
     await road_network_service.upload_road_network(
         db=db, file=file, current_user=current_user
     )
-    return {"message": "File Uploaded"}
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED, content={"message": "File Uploaded"}
+    )
 
 
 @router.get(
@@ -60,11 +64,11 @@ async def get_network(
     timestamp: datetime | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> JSONResponse:
     network = await road_network_service.get_network(
         db=db, current_user=current_user, network_id=network_id, timestamp=timestamp
     )
-    return network
+    return JSONResponse(status_code=status.HTTP_200_OK, content=network)
 
 
 @router.post(
@@ -88,8 +92,8 @@ async def update_network_from_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     file: UploadFile = File(...),
-):
+) -> NetworkUpdateResponse:
     result = await road_network_service.update_network_from_file(
         db=db, current_user=current_user, network_id=network_id, file=file
     )
-    return result
+    return NetworkUpdateResponse(message=result.message, network_id=result.network_id)

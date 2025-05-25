@@ -1,3 +1,4 @@
+from typing import Dict
 
 from pydantic import BaseModel, EmailStr
 
@@ -45,3 +46,18 @@ class ReadRoadNetwork(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class NetworkUpdateResponse(BaseModel):
+    message: str
+    network_id: int
+
+
+class UploadRoadNetworkResponse(BaseModel):
+    message: str
+    network_id: int
+
+
+class UpdateRoadNetworkResponse(BaseModel):
+    message: str
+    network_id: int

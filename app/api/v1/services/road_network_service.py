@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from typing import Union, List, Dict
 
 from fastapi import File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -11,10 +12,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.models import RoadEdge, RoadNetwork, User, UserRolesOptions
+from app.schemas import UploadRoadNetworkResponse, UpdateRoadNetworkResponse
 
 
 # HELPERS
-async def validate_uploaded_file(file: UploadFile):
+async def validate_uploaded_file(file: UploadFile) -> bytes:
     if not file.filename.endswith(".json") and not file.filename.endswith(".geojson"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension"
@@ -42,7 +44,7 @@ async def validate_uploaded_file(file: UploadFile):
     return contents
 
 
-async def normalize_lanes(value):
+async def normalize_lanes(value) -> Union[str | None]:
     """Normalize lanes value to a string."""
     if isinstance(value, list):
         return ",".join(map(str, value))
@@ -51,7 +53,7 @@ async def normalize_lanes(value):
     return None
 
 
-async def normalize_width(value):
+async def normalize_width(value) -> Union[List[float] | None]:
     """Normalize width value to a list of floats."""
     if isinstance(value, list):
         try:
@@ -92,14 +94,14 @@ async def create_road_edge(
     )
 
 
-async def mark_edges_as_not_current(db, network_id):
+async def mark_edges_as_not_current(db, network_id) -> None:
     """Mark all current edges in the network as not current."""
     db.query(RoadEdge).filter(
         and_(RoadEdge.network_id == network_id, RoadEdge.is_current == True)
     ).update({"is_current": False})
 
 
-async def build_updated_edge(feature, network_id, current_user_id):
+async def build_updated_edge(feature, network_id, current_user_id) -> RoadEdge:
     """Build a new edge from a GeoJSON feature."""
     geom = shape(feature["geometry"])
     geom_pg = from_shape(geom, srid=4326)
@@ -136,7 +138,7 @@ async def build_updated_edge(feature, network_id, current_user_id):
 # ENDPOINT HANDLERS
 async def upload_road_network(
     db: Session, current_user: User, file: UploadFile = File(...)
-):
+) -> UploadRoadNetworkResponse:
     try:
         content = await validate_uploaded_file(file)  # file.file.read()
         geojson_data = json.loads(content)
@@ -160,7 +162,9 @@ async def upload_road_network(
         db.bulk_save_objects(edges_to_add)
         db.commit()
 
-        return {"message": "Upload successful", "network_id": network.id}
+        return UploadRoadNetworkResponse(
+            message="Upload successful", network_id=network.id
+        )
 
     except Exception as e:
         db.rollback()
@@ -174,7 +178,7 @@ async def get_network(
     current_user: User,
     network_id: int,
     timestamp: datetime | None = None,
-):
+) -> Dict:
     try:
         if current_user.role == UserRolesOptions.ADMIN:
             network = db.query(RoadNetwork).filter_by(id=network_id).first()
@@ -200,7 +204,7 @@ async def get_network(
         edges = query.all()
 
         if not edges:
-            return JSONResponse(content={"type": "FeatureCollection", "features": []})
+            return {"type": "FeatureCollection", "features": []}
 
         features = [
             {
@@ -215,7 +219,7 @@ async def get_network(
             for edge in edges
         ]
 
-        return JSONResponse(content={"type": "FeatureCollection", "features": features})
+        return {"type": "FeatureCollection", "features": features}
 
     except SQLAlchemyError:
         raise HTTPException(
@@ -226,7 +230,7 @@ async def get_network(
 
 async def update_network_from_file(
     db: Session, current_user: User, network_id: int, file: UploadFile = File(...)
-):
+) -> UpdateRoadNetworkResponse:
     try:
         current_user_id = current_user.id
 
@@ -259,7 +263,10 @@ async def update_network_from_file(
         ]
         db.bulk_save_objects(new_features)
         db.commit()
-        return {"message": "Network updated successfully", "network_id": network.id}
+        return UpdateRoadNetworkResponse(
+            message="Network updated successfully",
+            network_id=int(getattr(network, "id")),
+        )
 
     except Exception as e:
         db.rollback()
