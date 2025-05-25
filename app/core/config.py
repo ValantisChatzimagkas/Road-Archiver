@@ -1,25 +1,34 @@
-from dynaconf import Dynaconf
-import os
+from functools import lru_cache
 
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres")
-DB_NAME = os.getenv("DB_NAME", "roadnetworks")
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
-settings = Dynaconf(
-    settings_files=["settings.toml", ".env"],
-    environments=True,
-    load_dotenv=True,
-)
 
-settings.DB_HOST = DB_HOST
-settings.DB_PORT = DB_PORT
-settings.DB_USER = DB_USER
-settings.DB_PASSWORD = DB_PASSWORD
-settings.DB_NAME = DB_NAME
+class Settings(BaseSettings):
+    db_host: str = Field(..., alias="POSTGRES_HOST")
+    db_port: str = Field(..., alias="POSTGRES_PORT")
+    db_user: str = Field(..., alias="POSTGRES_USER")
+    db_password: str = Field(..., alias="POSTGRES_PASSWORD")
+    db_name: str = Field(..., alias="POSTGRES_DB")
+    jwt_secret_key: str = Field(..., alias="JWT_SECRET_KEY")
 
-settings.DB_URL = (
-    f"postgresql+psycopg2://{settings.DB_USER}:{settings.DB_PASSWORD}"
-    f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-)
+    @property
+    def DB_URL(self) -> str:
+        return (
+            f"postgresql+psycopg2://{self.db_user}:{self.db_password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        allow_population_by_field_name = True
+        validate_by_name = True
+
+
+@lru_cache
+def get_settings():
+    return Settings()
+
+
+settings = get_settings()
