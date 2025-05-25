@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .mypy_cache
+.ruff_cache
 .vscode
 
 # C extensions
@@ -110,3 +111,5 @@ crashlytics-build.properties
 # Custom
 Pipfile.lock
 poetry.lock
+
+mypy_html_report/*
