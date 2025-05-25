@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 import pytest
 import requests
 
@@ -7,11 +8,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-
-
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def docker_compose_file(pytestconfig):
-    path = os.path.join(str(pytestconfig.rootdir), 'tests', 'docker-compose.test.yml')
+    path = os.path.join(str(pytestconfig.rootdir), "tests", "docker-compose.test.yml")
     assert os.path.isfile(path), f"docker-compose file not found: {path}"
     return path
 

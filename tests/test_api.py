@@ -1,6 +1,4 @@
-import datetime
 import json
-from http.client import HTTPException
 
 import pytest
 import requests
@@ -27,7 +25,7 @@ def login_user(api_url: str, email: str, password: str) -> str:
 
 
 def load_data_file(file_path: str):
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
     return data
 
@@ -80,9 +78,10 @@ class TestUsersEndpoints:
     )
     def test_get_user(self, api_url, user_payload):
         create_resp = requests.post(f"{api_url}/users/", json=user_payload)
-        assert create_resp.status_code in (200, 201), (
-            f"Create failed: {create_resp.text}"
-        )
+        assert create_resp.status_code in (
+            200,
+            201,
+        ), f"Create failed: {create_resp.text}"
         user_id = create_resp.json()["id"]
 
         # Get JWT
@@ -119,9 +118,10 @@ class TestRoadNetworksEndpoints:
     )
     def test_upload_road_network_file(self, api_url, file_path, user_payload):
         create_resp = requests.post(f"{api_url}/users/", json=user_payload)
-        assert create_resp.status_code in (200, 201), (
-            f"Create failed: {create_resp.text}"
-        )
+        assert create_resp.status_code in (
+            200,
+            201,
+        ), f"Create failed: {create_resp.text}"
 
         # Get JWT
         token = login_user(
@@ -193,9 +193,10 @@ class TestPermissions:
         created = {}
         for user_payload in users:
             resp = requests.post(f"{api_url}/users/", json=user_payload)
-            assert resp.status_code in (200, 201), (
-                f"Failed to create user {user_payload['email']}"
-            )
+            assert resp.status_code in (
+                200,
+                201,
+            ), f"Failed to create user {user_payload['email']}"
             user_data = resp.json()
             created[user_payload["username"]] = {
                 "id": user_data["id"],
@@ -218,9 +219,10 @@ class TestPermissions:
 
         admin_id = created_users["delete_admin"]["id"]  # use actual username key here
         response = requests.get(f"{api_url}/users/{admin_id}", headers=headers)
-        assert response.status_code in (401, 403), (
-            "USER should not access another user's data"
-        )
+        assert response.status_code in (
+            401,
+            403,
+        ), "USER should not access another user's data"
 
     def test_admin_can_see_other_users(self, api_url, created_users, tokens):
         admin_token = tokens["delete_admin"]
@@ -280,9 +282,10 @@ class TestPermissions:
             upload_resp = requests.post(
                 f"{api_url}/networks/upload", files=files, headers=headers_user1
             )
-        assert upload_resp.status_code in (200, 201), (
-            "User 1 should be able to upload network"
-        )
+        assert upload_resp.status_code in (
+            200,
+            201,
+        ), "User 1 should be able to upload network"
 
         # user 2 tries to get user_1 network:
         get_resp = requests.get(f"{api_url}/networks/{1}/edges", headers=headers_user2)
