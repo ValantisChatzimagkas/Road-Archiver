@@ -1,14 +1,16 @@
+from typing import Type, List, Any, Coroutine
+
 from fastapi import HTTPException, status
 from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, Query
 
 from app.core.security import Hasher
 from app.db.models import RoadNetwork, User, UserRolesOptions
 from app.schemas import CreateUser
 
 
-async def create_user(db: Session, request: CreateUser):
+async def create_user(db: Session, request: CreateUser) -> User:
     try:
         new_user = User(
             username=request.username,
@@ -26,9 +28,14 @@ async def create_user(db: Session, request: CreateUser):
         raise Exception(f"Failed to create user, {e}")
 
 
-async def get_user_by_id(db: Session, user_id: int, current_user: User):
+async def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
     try:
         user = db.query(User).filter_by(id=user_id).first()
+
+        if not user:
+            raise HTTPException(
+                detail="User not found", status_code=status.HTTP_404_NOT_FOUND
+            )
 
         if (
             current_user.role != UserRolesOptions.ADMIN.value
@@ -36,11 +43,6 @@ async def get_user_by_id(db: Session, user_id: int, current_user: User):
         ):
             raise HTTPException(
                 detail="Action not permitted", status_code=status.HTTP_401_UNAUTHORIZED
-            )
-
-        if not user:
-            raise HTTPException(
-                detail="User not found", status_code=status.HTTP_404_NOT_FOUND
             )
 
         return user
@@ -52,10 +54,19 @@ async def get_user_by_id(db: Session, user_id: int, current_user: User):
         )
 
 
-async def get_road_networks_for_user(db: Session, user_id: int, current_user: User):
+from sqlalchemy.orm import Query  # if not already imported
+
+
+async def get_road_networks_for_user(
+    db: Session, user_id: int, current_user: User
+) -> list[RoadNetwork]:  # More accurate than Query[RoadNetwork]
     try:
         user = db.query(User).filter_by(id=user_id).first()
-        networks = db.query(RoadNetwork).filter_by(user_id=user_id)
+
+        if not user:
+            raise HTTPException(
+                detail="User not found", status_code=status.HTTP_404_NOT_FOUND
+            )
 
         if (
             current_user.role != UserRolesOptions.ADMIN.value
@@ -65,8 +76,7 @@ async def get_road_networks_for_user(db: Session, user_id: int, current_user: Us
                 detail="Action not permitted", status_code=status.HTTP_401_UNAUTHORIZED
             )
 
-        if not networks:
-            return []
+        networks = db.query(RoadNetwork).filter_by(user_id=user_id).all()
 
         return networks
 
@@ -77,7 +87,7 @@ async def get_road_networks_for_user(db: Session, user_id: int, current_user: Us
         )
 
 
-async def delete_user(db: Session, user_id: int, current_user: User):
+async def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]:
     user = db.query(User).filter_by(id=user_id).first()
 
     if not user:
@@ -96,7 +106,7 @@ async def delete_user(db: Session, user_id: int, current_user: User):
 
 
 # for now, I use this for authenticating users, does not get used by a respective endpoint
-async def get_user_by_email(db: Session, email: EmailStr):
+async def get_user_by_email(db: Session, email: EmailStr) -> User:
     try:
         user = db.query(User).filter_by(email=email).first()
 
