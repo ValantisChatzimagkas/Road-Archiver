@@ -39,8 +39,14 @@ docker compose up --build
 
 To run all tests go at the root directory and run in the terminal:
 ```commandline
+poetry lock
+```
+
+And then you can run your tests:
+```commandline
 pytest
 ```
+
 
 
 **Step 3 -  check the documentation**
