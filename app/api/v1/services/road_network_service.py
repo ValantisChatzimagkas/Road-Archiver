@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from typing import Union, List, Dict, Any
 
 from fastapi import File, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import shape
 from shapely.geometry.geo import mapping
