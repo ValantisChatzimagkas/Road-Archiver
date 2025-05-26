@@ -1,8 +1,10 @@
 import os
+from typing import Dict
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+
 
 from app.api.v1.endpoints.authentication import router as authentication_router
 from app.api.v1.endpoints.road_networks import router as road_networks_router
@@ -33,11 +35,11 @@ models.Base.metadata.create_all(engine)
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
+async def root(request: Request) -> HTMLResponse:
     """Homepage."""
     return templates.TemplateResponse("homepage.html", {"request": request})
 
 
-@app.get("/health")
-def health_check():
+@app.get("/health", tags=["Health"])
+def health_check() -> Dict:
     return {"status": "ok"}

@@ -53,7 +53,7 @@ class RoadNetwork(Base):
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(UTC), nullable=False
     )
-    user_id: Mapped[[int]] = mapped_column(
+    user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=False
     )
 

@@ -1,17 +1,18 @@
 import json
+from typing import Union, Dict, List, Any
 
 import pytest
 import requests
 
 
 @pytest.fixture(scope="session", autouse=True)
-def api_healthcheck(api_url):
+def api_healthcheck(api_url: str) -> None:
     response = requests.get(f"{api_url}/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def login_user(api_url: str, email: str, password: str) -> str:
+def login_user(api_url: str, email: str, password: str) -> Any:
     """Logs in a user and returns a JWT access token."""
     login_data = {
         "username": email,
@@ -24,7 +25,7 @@ def login_user(api_url: str, email: str, password: str) -> str:
     return resp.json()["access_token"]
 
 
-def load_data_file(file_path: str):
+def load_data_file(file_path: str) -> Any:
     with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
     return data
@@ -49,7 +50,7 @@ class TestUsersEndpoints:
             },
         ],
     )
-    def test_create_user(self, api_url, user_payload):
+    def test_create_user(self, api_url: str, user_payload: Dict[str, str]) -> None:
         response = requests.post(f"{api_url}/users/", json=user_payload)
         assert response.status_code in (200, 201)
         created_user = response.json()
@@ -76,7 +77,7 @@ class TestUsersEndpoints:
             },
         ],
     )
-    def test_get_user(self, api_url, user_payload):
+    def test_get_user(self, api_url: str, user_payload: Dict[str, str]) -> None:
         create_resp = requests.post(f"{api_url}/users/", json=user_payload)
         assert create_resp.status_code in (
             200,
@@ -116,7 +117,9 @@ class TestRoadNetworksEndpoints:
             )
         ],
     )
-    def test_upload_road_network_file(self, api_url, file_path, user_payload):
+    def test_upload_road_network_file(
+        self, api_url: str, file_path: str, user_payload: Dict[str, str]
+    ) -> None:
         create_resp = requests.post(f"{api_url}/users/", json=user_payload)
         assert create_resp.status_code in (
             200,
@@ -140,7 +143,7 @@ class TestRoadNetworksEndpoints:
         assert upload_resp.status_code == 201, f"Upload failed: {upload_resp.text}"
         assert upload_resp.json().get("message") == "File Uploaded"
 
-    def test_get_network_file(self, api_url):
+    def test_get_network_file(self, api_url: str) -> None:
         # user the same user to being able to access the file
         token = login_user(
             api_url, "file_upload_user@example.com", "file_upload_user_pass"
@@ -162,7 +165,7 @@ class TestRoadNetworksEndpoints:
 @pytest.mark.role_based_permissions
 class TestPermissions:
     @pytest.fixture(scope="class")
-    def created_users(self, api_url):
+    def created_users(self, api_url: str) -> dict[str, dict[str, str | Any]]:
         users = [
             {
                 "username": "delete_user1",
@@ -206,14 +209,21 @@ class TestPermissions:
         return created
 
     @pytest.fixture(scope="class")
-    def tokens(self, api_url, created_users):
+    def tokens(
+        self, api_url: str, created_users: dict[str, dict[str, str]]
+    ) -> dict[str, Any]:
         tokens = {}
         for username, info in created_users.items():
             token = login_user(api_url, info["email"], info["password"])
             tokens[username] = token
         return tokens
 
-    def test_user_cannot_see_other_user(self, api_url, created_users, tokens):
+    def test_user_cannot_see_other_user(
+        self,
+        api_url: str,
+        created_users: dict[str, dict[str, str]],
+        tokens: dict[str, Any],
+    ) -> None:
         user_token = tokens["network_user_1"]  # use actual username key here
         headers = {"Authorization": f"Bearer {user_token}"}
 
@@ -224,7 +234,12 @@ class TestPermissions:
             403,
         ), "USER should not access another user's data"
 
-    def test_admin_can_see_other_users(self, api_url, created_users, tokens):
+    def test_admin_can_see_other_users(
+        self,
+        api_url: str,
+        created_users: dict[str, dict[str, str]],
+        tokens: dict[str, Any],
+    ) -> None:
         admin_token = tokens["delete_admin"]
         headers = {"Authorization": f"Bearer {admin_token}"}
 
@@ -234,7 +249,12 @@ class TestPermissions:
         data = response.json()
         assert data["id"] == user_id
 
-    def test_user_cannot_delete_other_user(self, api_url, created_users, tokens):
+    def test_user_cannot_delete_other_user(
+        self,
+        api_url: str,
+        created_users: dict[str, dict[str, str]],
+        tokens: dict[str, Any],
+    ) -> None:
         user_token = tokens["network_user_1"]
         headers = {"Authorization": f"Bearer {user_token}"}
 
@@ -242,7 +262,12 @@ class TestPermissions:
         response = requests.delete(f"{api_url}/users/{admin_id}", headers=headers)
         assert response.status_code in (401, 403), "USER should not delete other users"
 
-    def test_admin_can_delete_user(self, api_url, created_users, tokens):
+    def test_admin_can_delete_user(
+        self,
+        api_url: str,
+        created_users: dict[str, dict[str, str]],
+        tokens: dict[str, Any],
+    ) -> None:
         admin_token = tokens["delete_admin"]
         headers = {"Authorization": f"Bearer {admin_token}"}
 
@@ -265,8 +290,11 @@ class TestPermissions:
         assert get_resp.status_code == 404, "Deleted user should not be found"
 
     def test_user_cannot_access_or_modify_other_users_network(
-        self, api_url, created_users, tokens
-    ):
+        self,
+        api_url: str,
+        created_users: dict[str, dict[str, str]],
+        tokens: dict[str, Any],
+    ) -> None:
         user1_info = created_users.get("network_user_1")
         user2_info = created_users.get("network_user_2")
 

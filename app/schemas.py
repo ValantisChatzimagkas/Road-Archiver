@@ -61,3 +61,8 @@ class UploadRoadNetworkResponse(BaseModel):
 class UpdateRoadNetworkResponse(BaseModel):
     message: str
     network_id: int
+
+
+# -------------- Common ----------------------
+class MessageResponse(BaseModel):
+    detail: str

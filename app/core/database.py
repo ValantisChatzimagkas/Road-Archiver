@@ -1,5 +1,7 @@
+from typing import Any, Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
 
 from app.core.config import settings
 
@@ -7,10 +9,13 @@ engine = create_engine(settings.DB_URL, echo=True)
 
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
 
 
-def get_db():
+class Base(DeclarativeBase):
+    pass
+
+
+def get_db() -> Generator[Session, Any, None]:
     """
     Used for database dependency injection.
     :return:

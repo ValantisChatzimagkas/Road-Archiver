@@ -1,22 +1,24 @@
 import logging
 import os
+from typing import Union, Callable, Any
 
 import pytest
 import requests
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
-def docker_compose_file(pytestconfig):
+def docker_compose_file(pytestconfig: Any) -> str:
     path = os.path.join(str(pytestconfig.rootdir), "tests", "docker-compose.test.yml")
     assert os.path.isfile(path), f"docker-compose file not found: {path}"
     return path
 
 
-def is_responsive(url):
-    def _inner():
+def is_responsive(url: str) -> Callable[[], bool]:
+    def _inner() -> bool:
         try:
             logger.info(f"Checking if {url}/health is responsive...")
             response = requests.get(f"{url}/health", timeout=5)
@@ -30,7 +32,7 @@ def is_responsive(url):
 
 
 @pytest.fixture(scope="session")
-def api_url(docker_ip, docker_services):
+def api_url(docker_ip: int, docker_services: Any) -> str:
     """Get the URL for the API service."""
     host = docker_ip
     port = docker_services.port_for("api", 8000)
