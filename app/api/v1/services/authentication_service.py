@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Union
+from typing import Annotated, Union, Any, Optional
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -23,26 +23,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 async def authenticate_user(
     email: str, password: str, db: Session = Depends(get_db)
-) -> Union[User | bool]:
+) -> Optional[User]:
     """
-    Authenticates a user using a user's email
-    :param email:
-    :param password:
-    :param db:
-    :return:
+    Authenticates a user using their email and password.
+    Returns the User if valid, otherwise None.
     """
     user = await get_user_by_email(db, email)
-
-    if not user:
-        return False
-
-    if not Hasher.verify_password(password, user.hashed_password):
-        return False
+    if not user or not Hasher.verify_password(password, user.hashed_password):
+        return None
     return user
 
 
 async def create_access_token(
-    data: dict, expiration_delta: timedelta | None = None
+    data: dict[str, Any], expiration_delta: timedelta | None = None
 ) -> str:
     """
     Generates JWT access token

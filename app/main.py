@@ -11,6 +11,7 @@ from app.api.v1.endpoints.road_networks import router as road_networks_router
 from app.api.v1.endpoints.users import router as users_router
 from app.core.database import engine
 from app.db import models
+from app.core.database import Base
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
@@ -31,7 +32,7 @@ app.include_router(users_router)
 app.include_router(authentication_router)
 app.include_router(road_networks_router)
 
-models.Base.metadata.create_all(engine)
+Base.metadata.create_all(engine)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -41,5 +42,5 @@ async def root(request: Request) -> HTMLResponse:
 
 
 @app.get("/health", tags=["Health"])
-def health_check() -> Dict:
+def health_check() -> Dict[str, str]:
     return {"status": "ok"}

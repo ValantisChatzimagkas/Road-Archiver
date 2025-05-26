@@ -1,6 +1,6 @@
 import json
 from datetime import UTC, datetime
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Any
 
 from fastapi import File, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -17,10 +17,13 @@ from app.schemas import UploadRoadNetworkResponse, UpdateRoadNetworkResponse
 
 # HELPERS
 async def validate_uploaded_file(file: UploadFile) -> bytes:
-    if not file.filename.endswith(".json") and not file.filename.endswith(".geojson"):
+    if not file.filename or (
+        not file.filename.endswith(".json") and not file.filename.endswith(".geojson")
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension"
         )
+
 
     contents = await file.read()
 
@@ -44,7 +47,7 @@ async def validate_uploaded_file(file: UploadFile) -> bytes:
     return contents
 
 
-async def normalize_lanes(value) -> Union[str | None]:
+async def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
     """Normalize lanes value to a string."""
     if isinstance(value, list):
         return ",".join(map(str, value))
@@ -53,7 +56,7 @@ async def normalize_lanes(value) -> Union[str | None]:
     return None
 
 
-async def normalize_width(value) -> Union[List[float] | None]:
+async def normalize_width(value: Union[List[float] | float | None]) -> Union[List[float] | None]:
     """Normalize width value to a list of floats."""
     if isinstance(value, list):
         try:
@@ -69,7 +72,7 @@ async def normalize_width(value) -> Union[List[float] | None]:
 
 
 async def create_road_edge(
-    feature: dict, network_id: int, current_user_id: int
+    feature: dict[str, Any], network_id: int, current_user_id: int
 ) -> RoadEdge:
     geometry = from_shape(shape(feature.get("geometry")), srid=4326)
     properties = feature.get("properties", {})
@@ -94,14 +97,14 @@ async def create_road_edge(
     )
 
 
-async def mark_edges_as_not_current(db, network_id) -> None:
+async def mark_edges_as_not_current(db: Session, network_id: int) -> None:
     """Mark all current edges in the network as not current."""
     db.query(RoadEdge).filter(
         and_(RoadEdge.network_id == network_id, RoadEdge.is_current == True)
     ).update({"is_current": False})
 
 
-async def build_updated_edge(feature, network_id, current_user_id) -> RoadEdge:
+async def build_updated_edge(feature: dict[str, Any], network_id: int, current_user_id: int) -> RoadEdge:
     """Build a new edge from a GeoJSON feature."""
     geom = shape(feature["geometry"])
     geom_pg = from_shape(geom, srid=4326)
@@ -178,7 +181,7 @@ async def get_network(
     current_user: User,
     network_id: int,
     timestamp: datetime | None = None,
-) -> Dict:
+) -> Dict[str, Any]:
     try:
         if current_user.role == UserRolesOptions.ADMIN:
             network = db.query(RoadNetwork).filter_by(id=network_id).first()
