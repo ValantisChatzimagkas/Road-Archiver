@@ -1,6 +1,7 @@
 from typing import Any, Generator
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
 
 from app.core.config import settings
@@ -23,5 +24,8 @@ def get_db() -> Generator[Session, Any, None]:
     db = SessionLocal()
     try:
         yield db
+    except SQLAlchemyError:
+        db.rollback()
+        raise
     finally:
         db.close()
