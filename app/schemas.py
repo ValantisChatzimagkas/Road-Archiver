@@ -30,7 +30,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    email: str | None = None
+    email: EmailStr | None = None
 
 
 class UserAuth(BaseModel):
