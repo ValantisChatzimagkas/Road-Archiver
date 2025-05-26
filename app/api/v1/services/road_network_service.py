@@ -24,7 +24,6 @@ async def validate_uploaded_file(file: UploadFile) -> bytes:
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension"
         )
 
-
     contents = await file.read()
 
     try:
@@ -56,7 +55,9 @@ async def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
     return None
 
 
-async def normalize_width(value: Union[List[float] | float | None]) -> Union[List[float] | None]:
+async def normalize_width(
+    value: Union[List[float] | float | None],
+) -> Union[List[float] | None]:
     """Normalize width value to a list of floats."""
     if isinstance(value, list):
         try:
@@ -104,7 +105,9 @@ async def mark_edges_as_not_current(db: Session, network_id: int) -> None:
     ).update({"is_current": False})
 
 
-async def build_updated_edge(feature: dict[str, Any], network_id: int, current_user_id: int) -> RoadEdge:
+async def build_updated_edge(
+    feature: dict[str, Any], network_id: int, current_user_id: int
+) -> RoadEdge:
     """Build a new edge from a GeoJSON feature."""
     geom = shape(feature["geometry"])
     geom_pg = from_shape(geom, srid=4326)

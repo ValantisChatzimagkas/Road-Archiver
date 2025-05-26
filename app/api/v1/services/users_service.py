@@ -1,5 +1,3 @@
-from typing import Type, List, Any, Coroutine
-
 from fastapi import HTTPException, status
 from pydantic import EmailStr
 from sqlalchemy.exc import SQLAlchemyError
@@ -52,9 +50,6 @@ async def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
         )
-
-
-from sqlalchemy.orm import Query  # if not already imported
 
 
 async def get_road_networks_for_user(
