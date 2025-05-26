@@ -1,11 +1,14 @@
+from typing import List
+
 from fastapi import APIRouter, Body, Depends, status
 from sqlalchemy.orm import Session
+from starlette.responses import JSONResponse
 
 from app.api.v1.services import users_service
 from app.api.v1.services.authentication_service import get_current_user
 from app.core.database import get_db
 from app.db.models import User, UserRolesOptions
-from app.schemas import CreateUser, ReadRoadNetwork, ReadUser
+from app.schemas import CreateUser, ReadRoadNetwork, ReadUser, MessageResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -28,7 +31,7 @@ async def create_user(
         ),
     ),
     db: Session = Depends(get_db),
-):
+) -> User:
     created_user = await users_service.create_user(request=request, db=db)
     return created_user
 
@@ -56,7 +59,7 @@ async def get_user(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> ReadUser:
     user = await users_service.get_user_by_id(
         user_id=id, db=db, current_user=current_user
     )
@@ -81,7 +84,7 @@ async def get_road_networks_for_user(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> List[ReadRoadNetwork]:
     networks = await users_service.get_road_networks_for_user(
         user_id=id, db=db, current_user=current_user
     )
@@ -105,8 +108,8 @@ async def delete_user_endpoint(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> MessageResponse:
     result = await users_service.delete_user(
         db=db, user_id=id, current_user=current_user
     )
-    return result
+    return MessageResponse(**result)
