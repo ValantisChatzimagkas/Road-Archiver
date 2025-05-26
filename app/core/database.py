@@ -23,7 +23,7 @@ def get_db() -> Generator[Session, Any, None]:
     db = SessionLocal()
     try:
         yield db
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         db.rollback()
         logger.exception("DB rollback due to error")
         raise
