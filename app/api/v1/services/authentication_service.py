@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Union
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -21,7 +21,9 @@ EXPIRATION_THRESHOLD = 30  # minutes
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
-async def authenticate_user(email: str, password: str, db: Session = Depends(get_db)):
+async def authenticate_user(
+    email: str, password: str, db: Session = Depends(get_db)
+) -> Union[User | bool]:
     """
     Authenticates a user using a user's email
     :param email:
@@ -39,7 +41,9 @@ async def authenticate_user(email: str, password: str, db: Session = Depends(get
     return user
 
 
-async def create_access_token(data: dict, expiration_delta: timedelta | None = None):
+async def create_access_token(
+    data: dict, expiration_delta: timedelta | None = None
+) -> str:
     """
     Generates JWT access token
     :param data:
@@ -60,7 +64,7 @@ async def create_access_token(data: dict, expiration_delta: timedelta | None = N
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)
-):
+) -> User:
     """
     Implements logic for getting current user
     :param token:
@@ -91,5 +95,7 @@ async def get_current_user(
     return user
 
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
+async def get_current_active_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
     return current_user
