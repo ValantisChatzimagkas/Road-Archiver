@@ -3,7 +3,15 @@ from enum import Enum
 from typing import Any
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
+from geoalchemy2.elements import WKBElement
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -34,7 +42,6 @@ class User(Base):
     )
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String, nullable=False)
-
     role: Mapped[UserRolesOptions] = mapped_column(
         SqlEnum(UserRolesOptions), default=UserRolesOptions.USER, nullable=False
     )
@@ -58,7 +65,7 @@ class RoadNetwork(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="networks")
-    edges: Mapped["RoadEdge"] = relationship(
+    edges: Mapped[list["RoadEdge"]] = relationship(
         "RoadEdge", back_populates="network", cascade="all, delete-orphan"
     )
 
@@ -74,8 +81,8 @@ class RoadEdge(Base):
     length: Mapped[float | None] = mapped_column(Float, nullable=True)
     width: Mapped[list[float] | None] = mapped_column(ARRAY(Float), nullable=True)
     tunnel: Mapped[str | None] = mapped_column(String, nullable=True)
-    extra_properties: Mapped[dict[str, Any]] = mapped_column(JSONB, default={})
-    geometry: Mapped[dict[str, Any]] = mapped_column(
+    extra_properties: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    geometry: Mapped[WKBElement] = mapped_column(
         Geometry(geometry_type="GEOMETRY", srid=4326), nullable=False
     )
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
