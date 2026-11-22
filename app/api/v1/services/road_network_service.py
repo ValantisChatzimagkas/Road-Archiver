@@ -6,7 +6,7 @@ from fastapi import File, HTTPException, UploadFile, status
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import shape
 from shapely.geometry.geo import mapping
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -97,15 +97,15 @@ def create_road_edge(
     )
 
 
-def mark_edges_as_not_current(db: Session, network_id: int) -> None:
-    """Mark all current edges in the network as not current."""
+def mark_edges_as_not_current(db: Session, network_id: int, now: datetime) -> None:
+    """Mark all current edges in the network as superseded as of `now`."""
     db.query(RoadEdge).filter(
         and_(RoadEdge.network_id == network_id, RoadEdge.is_current == True)
-    ).update({"is_current": False})
+    ).update({"is_current": False, "superseded_at": now})
 
 
 def build_updated_edge(
-    feature: dict[str, Any], network_id: int, current_user_id: int
+    feature: dict[str, Any], network_id: int, current_user_id: int, now: datetime
 ) -> RoadEdge:
     """Build a new edge from a GeoJSON feature."""
     geom = shape(feature["geometry"])
@@ -133,7 +133,7 @@ def build_updated_edge(
             if k not in fields.union({"lanes", "width"})
         },
         is_current=True,
-        timestamp=datetime.now(UTC),
+        timestamp=now,
         network_id=network_id,
         user_id=current_user_id,
     )
@@ -171,6 +171,9 @@ def upload_road_network(
             message="Upload successful", network_id=network.id
         )
 
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -202,7 +205,10 @@ def get_network(
         query = db.query(RoadEdge).filter(RoadEdge.network_id == network_id)
 
         if timestamp:
-            query = query.filter(RoadEdge.timestamp <= timestamp)
+            query = query.filter(
+                RoadEdge.timestamp <= timestamp,
+                or_(RoadEdge.superseded_at.is_(None), RoadEdge.superseded_at > timestamp),
+            )
         else:
             query = query.filter(RoadEdge.is_current == True)
 
@@ -259,11 +265,12 @@ def update_network_from_file(
 
         features = geojson_data.get("features", [])
 
+        now = datetime.now(UTC)
         if features:
-            mark_edges_as_not_current(db, network_id)
+            mark_edges_as_not_current(db, network_id, now)
 
         new_features = [
-            build_updated_edge(feature, network_id, current_user_id)
+            build_updated_edge(feature, network_id, current_user_id, now)
             for feature in features
         ]
         db.bulk_save_objects(new_features)
@@ -273,8 +280,11 @@ def update_network_from_file(
             network_id=int(getattr(network, "id")),
         )
 
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Update failed: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Update failed: {str(e)}"
         )

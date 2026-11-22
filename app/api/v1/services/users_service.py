@@ -101,15 +101,9 @@ def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]
 
 
 # for now, I use this for authenticating users, does not get used by a respective endpoint
-def get_user_by_email(db: Session, email: EmailStr) -> User:
+def get_user_by_email(db: Session, email: EmailStr) -> User | None:
     try:
-        user = db.query(User).filter_by(email=email).first()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
-        return user
+        return db.query(User).filter_by(email=email).first()
 
     except SQLAlchemyError:
         raise HTTPException(
