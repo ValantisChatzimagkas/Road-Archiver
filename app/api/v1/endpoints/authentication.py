@@ -3,13 +3,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
 
 from app.api.v1.services.authentication_service import (
     authenticate_user,
     create_access_token,
 )
-from app.core.database import get_db
+from app.core.database import DbSession
 from app.schemas import Token
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -31,7 +30,7 @@ ACCESS_TOKEN_EXPIRATION_TIME = 1440  # minutes
 )
 def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: Session = Depends(get_db),
+    db: DbSession,
 ) -> Token:
     user = authenticate_user(form_data.username, form_data.password, db)
 

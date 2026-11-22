@@ -1,5 +1,5 @@
 import json
-from typing import Union, Dict, List, Any
+from typing import Any
 
 import pytest
 import requests
@@ -50,7 +50,7 @@ class TestUsersEndpoints:
             },
         ],
     )
-    def test_create_user(self, api_url: str, user_payload: Dict[str, str]) -> None:
+    def test_create_user(self, api_url: str, user_payload: dict[str, str]) -> None:
         response = requests.post(f"{api_url}/users/", json=user_payload)
         assert response.status_code in (200, 201)
         created_user = response.json()
@@ -77,7 +77,7 @@ class TestUsersEndpoints:
             },
         ],
     )
-    def test_get_user(self, api_url: str, user_payload: Dict[str, str]) -> None:
+    def test_get_user(self, api_url: str, user_payload: dict[str, str]) -> None:
         create_resp = requests.post(f"{api_url}/users/", json=user_payload)
         assert create_resp.status_code in (
             200,
@@ -118,7 +118,7 @@ class TestRoadNetworksEndpoints:
         ],
     )
     def test_upload_road_network_file(
-        self, api_url: str, file_path: str, user_payload: Dict[str, str]
+        self, api_url: str, file_path: str, user_payload: dict[str, str]
     ) -> None:
         create_resp = requests.post(f"{api_url}/users/", json=user_payload)
         assert create_resp.status_code in (
@@ -150,11 +150,7 @@ class TestRoadNetworksEndpoints:
         )
         headers = {"Authorization": f"Bearer {token}"}
 
-        # WARNING: IF YOU ADD MORE USERS AND THIS TEST FAILS THE REASON IS HOW MANY USERS YOU CREATED PRIOR
-        user_id = 1  # Since we move to this test suite this was the first user created
-
-        user_networks = requests.get(f"{api_url}/users/{1}/networks", headers=headers)
-
+        # Network ids are sequential: this suite's first upload is network 1.
         file_resp = requests.get(f"{api_url}/networks/{1}/edges", headers=headers)
 
         file = load_data_file("./tests/test_data/York_cycle_network.geojson")
@@ -295,9 +291,6 @@ class TestPermissions:
         created_users: dict[str, dict[str, str]],
         tokens: dict[str, Any],
     ) -> None:
-        user1_info = created_users.get("network_user_1")
-        user2_info = created_users.get("network_user_2")
-
         user1_token = tokens.get("network_user_1")
         user2_token = tokens.get("network_user_2")
 

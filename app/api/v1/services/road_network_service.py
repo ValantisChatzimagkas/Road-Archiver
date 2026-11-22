@@ -1,8 +1,8 @@
 import json
 from datetime import UTC, datetime
-from typing import Union, List, Dict, Any
+from typing import Any
 
-from fastapi import File, HTTPException, UploadFile, status
+from fastapi import HTTPException, UploadFile, status
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import shape
 from shapely.geometry.geo import mapping
@@ -11,7 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.models import RoadEdge, RoadNetwork, User, UserRolesOptions
-from app.schemas import UploadRoadNetworkResponse, UpdateRoadNetworkResponse
+from app.schemas import UpdateRoadNetworkResponse, UploadRoadNetworkResponse
 
 
 # HELPERS
@@ -28,7 +28,7 @@ def validate_uploaded_file(file: UploadFile) -> bytes:
     try:
         data = json.loads(contents)
     except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON file")
+        raise HTTPException(status_code=400, detail="Invalid JSON file") from None
 
     if not isinstance(data, dict) or "type" not in data:
         raise HTTPException(status_code=400, detail="Not a valid GeoJSON structure")
@@ -45,7 +45,7 @@ def validate_uploaded_file(file: UploadFile) -> bytes:
     return contents
 
 
-def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
+def normalize_lanes(value: list[Any] | str) -> str | None:
     """Normalize lanes value to a string."""
     if isinstance(value, list):
         return ",".join(map(str, value))
@@ -55,8 +55,8 @@ def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
 
 
 def normalize_width(
-    value: Union[List[float] | float | None],
-) -> Union[List[float] | None]:
+    value: list[float] | float | None,
+) -> list[float] | None:
     """Normalize width value to a list of floats."""
     if isinstance(value, list):
         try:
@@ -100,7 +100,7 @@ def create_road_edge(
 def mark_edges_as_not_current(db: Session, network_id: int, now: datetime) -> None:
     """Mark all current edges in the network as superseded as of `now`."""
     db.query(RoadEdge).filter(
-        and_(RoadEdge.network_id == network_id, RoadEdge.is_current == True)
+        and_(RoadEdge.network_id == network_id, RoadEdge.is_current.is_(True))
     ).update({"is_current": False, "superseded_at": now})
 
 
@@ -142,7 +142,7 @@ def build_updated_edge(
 
 # ENDPOINT HANDLERS
 def upload_road_network(
-    db: Session, current_user: User, file: UploadFile = File(...)
+    db: Session, current_user: User, file: UploadFile
 ) -> UploadRoadNetworkResponse:
     try:
         content = validate_uploaded_file(file)
@@ -178,7 +178,7 @@ def upload_road_network(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Upload failed: {str(e)}"
-        )
+        ) from None
 
 
 def get_network(
@@ -186,7 +186,7 @@ def get_network(
     current_user: User,
     network_id: int,
     timestamp: datetime | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     try:
         if current_user.role == UserRolesOptions.ADMIN:
             network = db.query(RoadNetwork).filter_by(id=network_id).first()
@@ -207,10 +207,13 @@ def get_network(
         if timestamp:
             query = query.filter(
                 RoadEdge.timestamp <= timestamp,
-                or_(RoadEdge.superseded_at.is_(None), RoadEdge.superseded_at > timestamp),
+                or_(
+                    RoadEdge.superseded_at.is_(None),
+                    RoadEdge.superseded_at > timestamp,
+                ),
             )
         else:
-            query = query.filter(RoadEdge.is_current == True)
+            query = query.filter(RoadEdge.is_current.is_(True))
 
         edges = query.all()
 
@@ -236,11 +239,11 @@ def get_network(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
 
 
 def update_network_from_file(
-    db: Session, current_user: User, network_id: int, file: UploadFile = File(...)
+    db: Session, current_user: User, network_id: int, file: UploadFile
 ) -> UpdateRoadNetworkResponse:
     try:
         current_user_id = current_user.id
@@ -277,7 +280,7 @@ def update_network_from_file(
         db.commit()
         return UpdateRoadNetworkResponse(
             message="Network updated successfully",
-            network_id=int(getattr(network, "id")),
+            network_id=int(network.id),
         )
 
     except HTTPException:
@@ -287,4 +290,4 @@ def update_network_from_file(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Update failed: {str(e)}"
-        )
+        ) from None

@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Union, Any, Optional
+from typing import Annotated, Any
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.services.users_service import get_user_by_email
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import DbSession
 from app.core.security import Hasher
 from app.db.models import User
 from app.schemas import TokenData
@@ -21,9 +21,7 @@ EXPIRATION_THRESHOLD = 30  # minutes
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
-def authenticate_user(
-    email: str, password: str, db: Session = Depends(get_db)
-) -> Optional[User]:
+def authenticate_user(email: str, password: str, db: Session) -> User | None:
     """
     Authenticates a user using their email and password.
     Returns the User if valid, otherwise None.
@@ -56,7 +54,7 @@ def create_access_token(
 
 
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)
+    token: Annotated[str, Depends(oauth2_scheme)], db: DbSession
 ) -> User:
     """
     Implements logic for getting current user
@@ -79,7 +77,7 @@ def get_current_user(
         token_data = TokenData(email=email)
 
     except InvalidTokenError:
-        raise credentials_exception
+        raise credentials_exception from None
 
     user = get_user_by_email(db, email=token_data.email)
 
@@ -88,7 +86,4 @@ def get_current_user(
     return user
 
 
-def get_current_active_user(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    return current_user
+CurrentUser = Annotated[User, Depends(get_current_user)]

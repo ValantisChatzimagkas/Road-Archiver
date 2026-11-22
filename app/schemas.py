@@ -1,5 +1,3 @@
-from typing import Dict
-
 from pydantic import BaseModel, EmailStr
 
 from app.db.models import UserRolesOptions

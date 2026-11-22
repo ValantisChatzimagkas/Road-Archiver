@@ -1,13 +1,12 @@
 from datetime import datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, File, UploadFile, status
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 
 from app.api.v1.services import road_network_service
-from app.api.v1.services.authentication_service import get_current_user
-from app.core.database import get_db
-from app.db.models import User
+from app.api.v1.services.authentication_service import CurrentUser
+from app.core.database import DbSession
 from app.schemas import NetworkUpdateResponse
 
 router = APIRouter(prefix="/networks", tags=["Networks"])
@@ -32,9 +31,9 @@ router = APIRouter(prefix="/networks", tags=["Networks"])
     },
 )
 def upload_road_network(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    file: Annotated[UploadFile, File()],
+    db: DbSession,
+    current_user: CurrentUser,
 ) -> JSONResponse:
     road_network_service.upload_road_network(
         db=db, file=file, current_user=current_user
@@ -61,9 +60,9 @@ def upload_road_network(
 )
 def get_network(
     network_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
     timestamp: datetime | None = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
     network = road_network_service.get_network(
         db=db, current_user=current_user, network_id=network_id, timestamp=timestamp
@@ -89,9 +88,9 @@ def get_network(
 )
 def update_network_from_file(
     network_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    file: UploadFile = File(...),
+    db: DbSession,
+    current_user: CurrentUser,
+    file: Annotated[UploadFile, File()],
 ) -> NetworkUpdateResponse:
     result = road_network_service.update_network_from_file(
         db=db, current_user=current_user, network_id=network_id, file=file

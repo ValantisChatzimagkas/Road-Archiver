@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from geoalchemy2 import Geometry
@@ -19,7 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
-class UserRolesOptions(str, Enum):
+class UserRolesOptions(StrEnum):
     """
     ADMIN: 	Full control: manage users, system settings, content, etc
     MODERATOR: Limited admin: review/manage content or users (but not system settings)

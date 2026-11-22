@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from pydantic import EmailStr
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, Query
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.core.security import Hasher
 from app.db.models import RoadNetwork, User, UserRolesOptions
@@ -21,9 +21,15 @@ def create_user(db: Session, request: CreateUser) -> User:
         db.commit()
         db.refresh(new_user)
         return new_user
-    except SQLAlchemyError as e:
+    except IntegrityError:
         db.rollback()
-        raise Exception(f"Failed to create user, {e}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username or email already registered",
+        ) from None
+    except SQLAlchemyError:
+        db.rollback()
+        raise
 
 
 def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
@@ -49,7 +55,7 @@ def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
 
 
 def get_road_networks_for_user(
@@ -79,7 +85,7 @@ def get_road_networks_for_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
 
 
 def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]:
@@ -100,7 +106,7 @@ def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]
     return {"detail": "User deleted successfully"}
 
 
-# for now, I use this for authenticating users, does not get used by a respective endpoint
+# Used for authentication; no endpoint exposes it.
 def get_user_by_email(db: Session, email: EmailStr) -> User | None:
     try:
         return db.query(User).filter_by(email=email).first()
@@ -109,4 +115,4 @@ def get_user_by_email(db: Session, email: EmailStr) -> User | None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
