@@ -86,7 +86,7 @@ curl -G $API/networks/1/edges -H "Authorization: Bearer $TOKEN" \
   --data-urlencode 'timestamp=2025-01-01T12:00:00Z'
 ```
 
-The edges endpoint returns a GeoJSON `FeatureCollection` whose features carry `timestamp`, `is_current` and the original edge properties. Try it interactively in the [live API docs](https://valantischatzimagkas.github.io/Road-Archiver/).
+The edges endpoint returns a GeoJSON `FeatureCollection` whose features carry the edge `id`, `timestamp` and `is_current` flag. Try it interactively in the [live API docs](https://valantischatzimagkas.github.io/Road-Archiver/).
 
 ## Running tests
 
