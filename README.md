@@ -86,9 +86,7 @@ curl -G $API/networks/1/edges -H "Authorization: Bearer $TOKEN" \
   --data-urlencode 'timestamp=2025-01-01T12:00:00Z'
 ```
 
-The edges endpoint returns a GeoJSON `FeatureCollection`:
-
-![Fetching a network's edges in Swagger UI](screenshots/Get_road_network_2.png)
+The edges endpoint returns a GeoJSON `FeatureCollection` whose features carry `timestamp`, `is_current` and the original edge properties. Try it interactively in the [live API docs](https://valantischatzimagkas.github.io/Road-Archiver/).
 
 ## Running tests
 
