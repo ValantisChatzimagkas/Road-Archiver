@@ -31,12 +31,12 @@ router = APIRouter(prefix="/networks", tags=["Networks"])
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
     },
 )
-async def upload_road_network(
+def upload_road_network(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
-    await road_network_service.upload_road_network(
+    road_network_service.upload_road_network(
         db=db, file=file, current_user=current_user
     )
     return JSONResponse(
@@ -59,13 +59,13 @@ async def upload_road_network(
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
     },
 )
-async def get_network(
+def get_network(
     network_id: int,
     timestamp: datetime | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
-    network = await road_network_service.get_network(
+    network = road_network_service.get_network(
         db=db, current_user=current_user, network_id=network_id, timestamp=timestamp
     )
     return JSONResponse(status_code=status.HTTP_200_OK, content=network)
@@ -87,13 +87,13 @@ async def get_network(
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
     },
 )
-async def update_network_from_file(
+def update_network_from_file(
     network_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     file: UploadFile = File(...),
 ) -> NetworkUpdateResponse:
-    result = await road_network_service.update_network_from_file(
+    result = road_network_service.update_network_from_file(
         db=db, current_user=current_user, network_id=network_id, file=file
     )
     return NetworkUpdateResponse(message=result.message, network_id=result.network_id)

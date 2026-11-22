@@ -29,11 +29,11 @@ ACCESS_TOKEN_EXPIRATION_TIME = 1440  # minutes
         },
     },
 )
-async def login(
+def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db),
 ) -> Token:
-    user = await authenticate_user(form_data.username, form_data.password, db)
+    user = authenticate_user(form_data.username, form_data.password, db)
 
     if not user:
         raise HTTPException(
@@ -43,7 +43,7 @@ async def login(
         )
 
     access_token_expiration = timedelta(minutes=ACCESS_TOKEN_EXPIRATION_TIME)
-    access_token = await create_access_token(
+    access_token = create_access_token(
         data={"sub": user.email}, expiration_delta=access_token_expiration
     )
     return Token(access_token=access_token, token_type="bearer")

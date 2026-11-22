@@ -20,7 +20,7 @@ router = APIRouter(prefix="/users", tags=["users"])
     description="Creates a user with the provided details.",
     responses={status.HTTP_201_CREATED: {"description": "User successfully created"}},
 )
-async def create_user(
+def create_user(
     request: CreateUser = Body(
         ...,
         example=dict(
@@ -32,7 +32,7 @@ async def create_user(
     ),
     db: Session = Depends(get_db),
 ) -> User:
-    created_user = await users_service.create_user(request=request, db=db)
+    created_user = users_service.create_user(request=request, db=db)
     return created_user
 
 
@@ -55,12 +55,12 @@ async def create_user(
         status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"},
     },
 )
-async def get_user(
+def get_user(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> User:
-    user = await users_service.get_user_by_id(
+    user = users_service.get_user_by_id(
         user_id=id, db=db, current_user=current_user
     )
     return user
@@ -80,12 +80,12 @@ async def get_user(
         status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"},
     },
 )
-async def get_road_networks_for_user(
+def get_road_networks_for_user(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[ReadRoadNetwork]:
-    networks = await users_service.get_road_networks_for_user(
+    networks = users_service.get_road_networks_for_user(
         user_id=id, db=db, current_user=current_user
     )
     return networks
@@ -104,12 +104,12 @@ async def get_road_networks_for_user(
         status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"},
     },
 )
-async def delete_user_endpoint(
+def delete_user_endpoint(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> MessageResponse:
-    result = await users_service.delete_user(
+    result = users_service.delete_user(
         db=db, user_id=id, current_user=current_user
     )
     return MessageResponse(**result)

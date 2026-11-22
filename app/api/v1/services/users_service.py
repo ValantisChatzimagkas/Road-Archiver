@@ -8,7 +8,7 @@ from app.db.models import RoadNetwork, User, UserRolesOptions
 from app.schemas import CreateUser
 
 
-async def create_user(db: Session, request: CreateUser) -> User:
+def create_user(db: Session, request: CreateUser) -> User:
     try:
         new_user = User(
             username=request.username,
@@ -26,7 +26,7 @@ async def create_user(db: Session, request: CreateUser) -> User:
         raise Exception(f"Failed to create user, {e}")
 
 
-async def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
+def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
     try:
         user = db.query(User).filter_by(id=user_id).first()
 
@@ -52,7 +52,7 @@ async def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
         )
 
 
-async def get_road_networks_for_user(
+def get_road_networks_for_user(
     db: Session, user_id: int, current_user: User
 ) -> list[RoadNetwork]:  # More accurate than Query[RoadNetwork]
     try:
@@ -82,7 +82,7 @@ async def get_road_networks_for_user(
         )
 
 
-async def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]:
+def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]:
     user = db.query(User).filter_by(id=user_id).first()
 
     if not user:
@@ -101,7 +101,7 @@ async def delete_user(db: Session, user_id: int, current_user: User) -> dict[str
 
 
 # for now, I use this for authenticating users, does not get used by a respective endpoint
-async def get_user_by_email(db: Session, email: EmailStr) -> User:
+def get_user_by_email(db: Session, email: EmailStr) -> User:
     try:
         user = db.query(User).filter_by(email=email).first()
 

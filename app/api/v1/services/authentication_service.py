@@ -21,20 +21,20 @@ EXPIRATION_THRESHOLD = 30  # minutes
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
-async def authenticate_user(
+def authenticate_user(
     email: str, password: str, db: Session = Depends(get_db)
 ) -> Optional[User]:
     """
     Authenticates a user using their email and password.
     Returns the User if valid, otherwise None.
     """
-    user = await get_user_by_email(db, email)
+    user = get_user_by_email(db, email)
     if not user or not Hasher.verify_password(password, user.hashed_password):
         return None
     return user
 
 
-async def create_access_token(
+def create_access_token(
     data: dict[str, Any], expiration_delta: timedelta | None = None
 ) -> str:
     """
@@ -55,7 +55,7 @@ async def create_access_token(
     return encoded_jwt
 
 
-async def get_current_user(
+def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)
 ) -> User:
     """
@@ -81,14 +81,14 @@ async def get_current_user(
     except InvalidTokenError:
         raise credentials_exception
 
-    user = await get_user_by_email(db, email=token_data.email)
+    user = get_user_by_email(db, email=token_data.email)
 
     if user is None:
         raise credentials_exception
     return user
 
 
-async def get_current_active_user(
+def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     return current_user

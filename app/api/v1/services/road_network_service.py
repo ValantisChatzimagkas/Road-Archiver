@@ -15,7 +15,7 @@ from app.schemas import UploadRoadNetworkResponse, UpdateRoadNetworkResponse
 
 
 # HELPERS
-async def validate_uploaded_file(file: UploadFile) -> bytes:
+def validate_uploaded_file(file: UploadFile) -> bytes:
     if not file.filename or (
         not file.filename.endswith(".json") and not file.filename.endswith(".geojson")
     ):
@@ -23,7 +23,7 @@ async def validate_uploaded_file(file: UploadFile) -> bytes:
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension"
         )
 
-    contents = await file.read()
+    contents = file.file.read()
 
     try:
         data = json.loads(contents)
@@ -45,7 +45,7 @@ async def validate_uploaded_file(file: UploadFile) -> bytes:
     return contents
 
 
-async def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
+def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
     """Normalize lanes value to a string."""
     if isinstance(value, list):
         return ",".join(map(str, value))
@@ -54,7 +54,7 @@ async def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
     return None
 
 
-async def normalize_width(
+def normalize_width(
     value: Union[List[float] | float | None],
 ) -> Union[List[float] | None]:
     """Normalize width value to a list of floats."""
@@ -71,14 +71,14 @@ async def normalize_width(
     return None
 
 
-async def create_road_edge(
+def create_road_edge(
     feature: dict[str, Any], network_id: int, current_user_id: int
 ) -> RoadEdge:
     geometry = from_shape(shape(feature.get("geometry")), srid=4326)
     properties = feature.get("properties", {})
 
-    lanes_value = await normalize_lanes(properties.get("lanes"))
-    width_value = await normalize_width(properties.get("width"))
+    lanes_value = normalize_lanes(properties.get("lanes"))
+    width_value = normalize_width(properties.get("width"))
     known_fields = {"name", "ref", "oneway", "length", "tunnel", "lanes", "width"}
 
     return RoadEdge(
@@ -97,14 +97,14 @@ async def create_road_edge(
     )
 
 
-async def mark_edges_as_not_current(db: Session, network_id: int) -> None:
+def mark_edges_as_not_current(db: Session, network_id: int) -> None:
     """Mark all current edges in the network as not current."""
     db.query(RoadEdge).filter(
         and_(RoadEdge.network_id == network_id, RoadEdge.is_current == True)
     ).update({"is_current": False})
 
 
-async def build_updated_edge(
+def build_updated_edge(
     feature: dict[str, Any], network_id: int, current_user_id: int
 ) -> RoadEdge:
     """Build a new edge from a GeoJSON feature."""
@@ -113,8 +113,8 @@ async def build_updated_edge(
 
     properties = feature.get("properties", {})
 
-    lanes_value = await normalize_lanes(properties.get("lanes"))
-    width_value = await normalize_width(properties.get("width"))
+    lanes_value = normalize_lanes(properties.get("lanes"))
+    width_value = normalize_width(properties.get("width"))
 
     fields = {"name", "ref", "oneway", "length", "tunnel"}
 
@@ -141,11 +141,11 @@ async def build_updated_edge(
 
 
 # ENDPOINT HANDLERS
-async def upload_road_network(
+def upload_road_network(
     db: Session, current_user: User, file: UploadFile = File(...)
 ) -> UploadRoadNetworkResponse:
     try:
-        content = await validate_uploaded_file(file)  # file.file.read()
+        content = validate_uploaded_file(file)
         geojson_data = json.loads(content)
 
         network_name = geojson_data.get("name") or "Unnamed Network"
@@ -160,7 +160,7 @@ async def upload_road_network(
         features = geojson_data.get("features", [])
 
         edges_to_add = [
-            await create_road_edge(feature, network.id, current_user.id)
+            create_road_edge(feature, network.id, current_user.id)
             for feature in features
         ]
 
@@ -178,7 +178,7 @@ async def upload_road_network(
         )
 
 
-async def get_network(
+def get_network(
     db: Session,
     current_user: User,
     network_id: int,
@@ -233,7 +233,7 @@ async def get_network(
         )
 
 
-async def update_network_from_file(
+def update_network_from_file(
     db: Session, current_user: User, network_id: int, file: UploadFile = File(...)
 ) -> UpdateRoadNetworkResponse:
     try:
@@ -253,17 +253,17 @@ async def update_network_from_file(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Network not found"
             )
 
-        content = await file.read()
+        content = file.file.read()
         geojson_data = json.loads(content)
         current_user_id = current_user_id
 
         features = geojson_data.get("features", [])
 
         if features:
-            await mark_edges_as_not_current(db, network_id)
+            mark_edges_as_not_current(db, network_id)
 
         new_features = [
-            await build_updated_edge(feature, network_id, current_user_id)
+            build_updated_edge(feature, network_id, current_user_id)
             for feature in features
         ]
         db.bulk_save_objects(new_features)
