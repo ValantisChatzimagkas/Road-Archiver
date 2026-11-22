@@ -1,14 +1,12 @@
-from typing import List
+from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, status
-from sqlalchemy.orm import Session
-from starlette.responses import JSONResponse
+from fastapi import APIRouter, Body, status
 
 from app.api.v1.services import users_service
-from app.api.v1.services.authentication_service import get_current_user
-from app.core.database import get_db
+from app.api.v1.services.authentication_service import CurrentUser
+from app.core.database import DbSession
 from app.db.models import User, UserRolesOptions
-from app.schemas import CreateUser, ReadRoadNetwork, ReadUser, MessageResponse
+from app.schemas import CreateUser, MessageResponse, ReadRoadNetwork, ReadUser
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -20,19 +18,21 @@ router = APIRouter(prefix="/users", tags=["users"])
     description="Creates a user with the provided details.",
     responses={status.HTTP_201_CREATED: {"description": "User successfully created"}},
 )
-async def create_user(
-    request: CreateUser = Body(
-        ...,
-        example=dict(
-            username="my_user",
-            email="my_user@coldmail.com",
-            hashed_password="A_sword",
-            role=UserRolesOptions.USER,
+def create_user(
+    request: Annotated[
+        CreateUser,
+        Body(
+            example=dict(
+                username="my_user",
+                email="my_user@coldmail.com",
+                hashed_password="A_sword",
+                role=UserRolesOptions.USER,
+            ),
         ),
-    ),
-    db: Session = Depends(get_db),
+    ],
+    db: DbSession,
 ) -> User:
-    created_user = await users_service.create_user(request=request, db=db)
+    created_user = users_service.create_user(request=request, db=db)
     return created_user
 
 
@@ -55,14 +55,12 @@ async def create_user(
         status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"},
     },
 )
-async def get_user(
+def get_user(
     id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: DbSession,
+    current_user: CurrentUser,
 ) -> User:
-    user = await users_service.get_user_by_id(
-        user_id=id, db=db, current_user=current_user
-    )
+    user = users_service.get_user_by_id(user_id=id, db=db, current_user=current_user)
     return user
 
 
@@ -71,7 +69,7 @@ async def get_user(
     response_model=list[ReadRoadNetwork],
     summary="Get road networks for user",
     description="""
-             This endpoint will retrieve all the road networks that are associated to a user.
+             This endpoint will retrieve all the road networks associated with a user.
 
              - Requires authentication.
              """,
@@ -80,12 +78,12 @@ async def get_user(
         status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"},
     },
 )
-async def get_road_networks_for_user(
+def get_road_networks_for_user(
     id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> List[ReadRoadNetwork]:
-    networks = await users_service.get_road_networks_for_user(
+    db: DbSession,
+    current_user: CurrentUser,
+) -> list[ReadRoadNetwork]:
+    networks = users_service.get_road_networks_for_user(
         user_id=id, db=db, current_user=current_user
     )
     return networks
@@ -95,7 +93,7 @@ async def get_road_networks_for_user(
     "/{id}",
     summary="Deletes a user",
     description="""
-               Delete a user, in order to user this endpoint, the caller must be an Admin.
+               Delete a user. The caller must be an Admin.
                
                - Requires authentication.
                """,
@@ -104,12 +102,10 @@ async def get_road_networks_for_user(
         status.HTTP_401_UNAUTHORIZED: {"description": "Not Allowed"},
     },
 )
-async def delete_user_endpoint(
+def delete_user_endpoint(
     id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: DbSession,
+    current_user: CurrentUser,
 ) -> MessageResponse:
-    result = await users_service.delete_user(
-        db=db, user_id=id, current_user=current_user
-    )
+    result = users_service.delete_user(db=db, user_id=id, current_user=current_user)
     return MessageResponse(**result)

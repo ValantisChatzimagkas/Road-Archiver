@@ -1,10 +1,10 @@
 import logging
 import os
-from typing import Union, Callable, Any
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 import requests
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

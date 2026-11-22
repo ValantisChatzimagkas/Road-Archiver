@@ -1,21 +1,21 @@
 import json
 from datetime import UTC, datetime
-from typing import Union, List, Dict, Any
+from typing import Any
 
-from fastapi import File, HTTPException, UploadFile, status
+from fastapi import HTTPException, UploadFile, status
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import shape
 from shapely.geometry.geo import mapping
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db.models import RoadEdge, RoadNetwork, User, UserRolesOptions
-from app.schemas import UploadRoadNetworkResponse, UpdateRoadNetworkResponse
+from app.schemas import UpdateRoadNetworkResponse, UploadRoadNetworkResponse
 
 
 # HELPERS
-async def validate_uploaded_file(file: UploadFile) -> bytes:
+def validate_uploaded_file(file: UploadFile) -> bytes:
     if not file.filename or (
         not file.filename.endswith(".json") and not file.filename.endswith(".geojson")
     ):
@@ -23,12 +23,12 @@ async def validate_uploaded_file(file: UploadFile) -> bytes:
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file extension"
         )
 
-    contents = await file.read()
+    contents = file.file.read()
 
     try:
         data = json.loads(contents)
     except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON file")
+        raise HTTPException(status_code=400, detail="Invalid JSON file") from None
 
     if not isinstance(data, dict) or "type" not in data:
         raise HTTPException(status_code=400, detail="Not a valid GeoJSON structure")
@@ -45,7 +45,7 @@ async def validate_uploaded_file(file: UploadFile) -> bytes:
     return contents
 
 
-async def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
+def normalize_lanes(value: list[Any] | str) -> str | None:
     """Normalize lanes value to a string."""
     if isinstance(value, list):
         return ",".join(map(str, value))
@@ -54,9 +54,9 @@ async def normalize_lanes(value: Union[List[Any] | str]) -> Union[str | None]:
     return None
 
 
-async def normalize_width(
-    value: Union[List[float] | float | None],
-) -> Union[List[float] | None]:
+def normalize_width(
+    value: list[float] | float | None,
+) -> list[float] | None:
     """Normalize width value to a list of floats."""
     if isinstance(value, list):
         try:
@@ -71,14 +71,14 @@ async def normalize_width(
     return None
 
 
-async def create_road_edge(
+def create_road_edge(
     feature: dict[str, Any], network_id: int, current_user_id: int
 ) -> RoadEdge:
     geometry = from_shape(shape(feature.get("geometry")), srid=4326)
     properties = feature.get("properties", {})
 
-    lanes_value = await normalize_lanes(properties.get("lanes"))
-    width_value = await normalize_width(properties.get("width"))
+    lanes_value = normalize_lanes(properties.get("lanes"))
+    width_value = normalize_width(properties.get("width"))
     known_fields = {"name", "ref", "oneway", "length", "tunnel", "lanes", "width"}
 
     return RoadEdge(
@@ -97,15 +97,15 @@ async def create_road_edge(
     )
 
 
-async def mark_edges_as_not_current(db: Session, network_id: int) -> None:
-    """Mark all current edges in the network as not current."""
+def mark_edges_as_not_current(db: Session, network_id: int, now: datetime) -> None:
+    """Mark all current edges in the network as superseded as of `now`."""
     db.query(RoadEdge).filter(
-        and_(RoadEdge.network_id == network_id, RoadEdge.is_current == True)
-    ).update({"is_current": False})
+        and_(RoadEdge.network_id == network_id, RoadEdge.is_current.is_(True))
+    ).update({"is_current": False, "superseded_at": now})
 
 
-async def build_updated_edge(
-    feature: dict[str, Any], network_id: int, current_user_id: int
+def build_updated_edge(
+    feature: dict[str, Any], network_id: int, current_user_id: int, now: datetime
 ) -> RoadEdge:
     """Build a new edge from a GeoJSON feature."""
     geom = shape(feature["geometry"])
@@ -113,8 +113,8 @@ async def build_updated_edge(
 
     properties = feature.get("properties", {})
 
-    lanes_value = await normalize_lanes(properties.get("lanes"))
-    width_value = await normalize_width(properties.get("width"))
+    lanes_value = normalize_lanes(properties.get("lanes"))
+    width_value = normalize_width(properties.get("width"))
 
     fields = {"name", "ref", "oneway", "length", "tunnel"}
 
@@ -133,7 +133,7 @@ async def build_updated_edge(
             if k not in fields.union({"lanes", "width"})
         },
         is_current=True,
-        timestamp=datetime.now(UTC),
+        timestamp=now,
         network_id=network_id,
         user_id=current_user_id,
     )
@@ -141,11 +141,11 @@ async def build_updated_edge(
 
 
 # ENDPOINT HANDLERS
-async def upload_road_network(
-    db: Session, current_user: User, file: UploadFile = File(...)
+def upload_road_network(
+    db: Session, current_user: User, file: UploadFile
 ) -> UploadRoadNetworkResponse:
     try:
-        content = await validate_uploaded_file(file)  # file.file.read()
+        content = validate_uploaded_file(file)
         geojson_data = json.loads(content)
 
         network_name = geojson_data.get("name") or "Unnamed Network"
@@ -160,7 +160,7 @@ async def upload_road_network(
         features = geojson_data.get("features", [])
 
         edges_to_add = [
-            await create_road_edge(feature, network.id, current_user.id)
+            create_road_edge(feature, network.id, current_user.id)
             for feature in features
         ]
 
@@ -171,19 +171,22 @@ async def upload_road_network(
             message="Upload successful", network_id=network.id
         )
 
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Upload failed: {str(e)}"
-        )
+        ) from None
 
 
-async def get_network(
+def get_network(
     db: Session,
     current_user: User,
     network_id: int,
     timestamp: datetime | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     try:
         if current_user.role == UserRolesOptions.ADMIN:
             network = db.query(RoadNetwork).filter_by(id=network_id).first()
@@ -202,9 +205,15 @@ async def get_network(
         query = db.query(RoadEdge).filter(RoadEdge.network_id == network_id)
 
         if timestamp:
-            query = query.filter(RoadEdge.timestamp <= timestamp)
+            query = query.filter(
+                RoadEdge.timestamp <= timestamp,
+                or_(
+                    RoadEdge.superseded_at.is_(None),
+                    RoadEdge.superseded_at > timestamp,
+                ),
+            )
         else:
-            query = query.filter(RoadEdge.is_current == True)
+            query = query.filter(RoadEdge.is_current.is_(True))
 
         edges = query.all()
 
@@ -230,11 +239,11 @@ async def get_network(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
 
 
-async def update_network_from_file(
-    db: Session, current_user: User, network_id: int, file: UploadFile = File(...)
+def update_network_from_file(
+    db: Session, current_user: User, network_id: int, file: UploadFile
 ) -> UpdateRoadNetworkResponse:
     try:
         current_user_id = current_user.id
@@ -253,28 +262,32 @@ async def update_network_from_file(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Network not found"
             )
 
-        content = await file.read()
+        content = file.file.read()
         geojson_data = json.loads(content)
         current_user_id = current_user_id
 
         features = geojson_data.get("features", [])
 
+        now = datetime.now(UTC)
         if features:
-            await mark_edges_as_not_current(db, network_id)
+            mark_edges_as_not_current(db, network_id, now)
 
         new_features = [
-            await build_updated_edge(feature, network_id, current_user_id)
+            build_updated_edge(feature, network_id, current_user_id, now)
             for feature in features
         ]
         db.bulk_save_objects(new_features)
         db.commit()
         return UpdateRoadNetworkResponse(
             message="Network updated successfully",
-            network_id=int(getattr(network, "id")),
+            network_id=int(network.id),
         )
 
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Update failed: {str(e)}"
-        )
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Update failed: {str(e)}"
+        ) from None

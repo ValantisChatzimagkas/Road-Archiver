@@ -2,169 +2,131 @@
 
 [![CI](https://github.com/ValantisChatzimagkas/Road-Archiver/actions/workflows/ci.yml/badge.svg)](https://github.com/ValantisChatzimagkas/Road-Archiver/actions/workflows/ci.yml)
 
-A REST API for managing versioned road networks. Upload GeoJSON road networks, push updates over time without losing history, and query any network as it existed at a given point in time.
+A REST API for versioned road networks. Upload a network as GeoJSON, push updates over time without losing history, and query the network as it existed at any point in time.
 
-**Stack:** FastAPI · PostgreSQL + PostGIS · SQLAlchemy / GeoAlchemy2 · Alembic · JWT auth with role-based permissions · Docker Compose · pytest
+Live API docs (Swagger UI): <https://valantischatzimagkas.github.io/Road-Archiver/>
 
----
+## Overview
 
-# Task - Development of REST API for management of road networks
-The task is made up of three subtasks, all of which must be completed. The aim is to create a simple Rest API for managing road networks. Three example road networks (node-edge models) in GeoJSON format are attached for processing the task.
+Road networks change, and downstream consumers often need to know what the network looked like at a specific moment. Road Archiver stores each network as a set of edges (road segments) in PostGIS. Updates never delete anything: replaced edges are marked as superseded and stay queryable.
 
+**Stack:** FastAPI, SQLAlchemy 2.0, GeoAlchemy2, PostgreSQL/PostGIS, Alembic, JWT auth, uv, Docker Compose, pytest.
 
-## Tasks:
-### Task 1
+## Features
 
-The first two road networks should be uploaded via an endpoint and stored in a PostgreSQL database. Since the road networks essentially consist of geometries, the use of a geo-extension such as PostGIS is recommended in order to store the data efficiently. As the road networks belong to different customers, they must have a corresponding attribute to enable simple authorization.
+- Upload road networks as GeoJSON; each belongs to the user that uploaded it.
+- Update a network from a new GeoJSON file. Previous edges are kept, flagged as not current.
+- Retrieve a network's edges as GeoJSON, either the current state or the state at a given timestamp.
+- JWT authentication (bcrypt-hashed passwords) with role-based access.
+- Schema managed by Alembic migrations, applied automatically on container start.
+- Integration tests that run against the real API and PostGIS in Docker.
 
-### Task 2
+## Architecture
 
-The third road network is an updated version of the second network. It should be possible to perform an update via another endpoint by uploading the updated version of the network. During an update, the original edges should not be deleted, but only marked as not up-to-date.
+```
+app/
+  api/v1/endpoints/   HTTP layer: routing, request/response models, auth dependencies
+  api/v1/services/    Business logic and database access
+  db/models.py        SQLAlchemy / GeoAlchemy2 models
+  core/               Settings, DB session, password hashing
+alembic/              Schema migrations
+```
 
-### Task 3
+Requests flow endpoints -> services -> models. Handlers are plain `def` functions, so FastAPI runs them in its threadpool, which suits the blocking SQLAlchemy session.
 
-The edges of the road networks should be retrievable via an additional endpoint in GeoJSON format. The endpoint should only return the edges of the specified network of an authenticated customer. It should also be possible to use a parameter to specify which point in time the network should correspond to, i.e. network 2 should be able to be retrieved in its state before and after the update.
+**Auth.** `POST /auth/login` takes the user's email and password and returns a signed JWT (HS256, 24h expiry). Protected endpoints resolve the current user from the bearer token.
 
+**Versioning model.** A network owns many `road_edges`. Each edge has a `timestamp` (when it was created), an `is_current` flag and a `superseded_at` timestamp (set when an update replaces it). Nothing is ever deleted by an update.
 
-## Specifications
+## Getting started
 
+Requires Docker with Compose.
 
-1. The API framework to be used should be Flask or FastAPI, while the database is to be realized using Postgres.
-2. A README.md should document the application and the approach to the task.
-3. The solution must be containerized and readily executable using Docker-Compose.
-
----
-
-# Getting started - Setup
-**Step 1 - clone project:**
 ```bash
 git clone https://github.com/ValantisChatzimagkas/Road-Archiver.git
 cd Road-Archiver
-```
-
-**Step 2 - build and run project with docker-compose:**
-```
 docker compose up --build
 ```
 
-**Step 3 -  check the documentation**
-If everything went ok you can go to the home page at: [http://127.0.0.1:8000/](http://127.0.0.1:8000/) and there click the **Docs** link<br>
-Or you can directly access them from here: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+The stack works with no configuration, using dev-only defaults for the database credentials and JWT secret. To override them, copy `.env.example` to `.env`. Always set your own `JWT_SECRET_KEY` for anything other than local use. Set `API_PORT` to publish the API on a port other than 8000.
 
+The API is then available at <http://localhost:8000>, with interactive docs at <http://localhost:8000/docs>. The database is not published to the host.
 
-# Tests:
+## API usage
 
-The test suite spins up the API and a PostGIS database with Docker Compose (via `pytest-docker`).
-From the project root:
+Sample files are in [`examples/`](examples/).
+
 ```bash
-poetry install
-poetry run pytest
+API=http://localhost:8000
+
+# Register (the response contains your user id)
+curl -X POST $API/users/ -H 'Content-Type: application/json' \
+  -d '{"username":"alice","email":"alice@example.com","hashed_password":"s3cret","role":"USER"}'
+
+# Log in (form-encoded; the username field is the email)
+TOKEN=$(curl -s -X POST $API/auth/login \
+  -d 'username=alice@example.com&password=s3cret' | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')
+
+# Upload a network
+curl -X POST $API/networks/upload -H "Authorization: Bearer $TOKEN" \
+  -F 'file=@examples/road_network_bayrischzell_1.0.geojson'
+
+# List your networks to find the network id (replace 1 with your user id)
+curl $API/users/1/networks -H "Authorization: Bearer $TOKEN"
+
+# Update network 1 with a newer version of the data
+curl -X POST $API/networks/1/update -H "Authorization: Bearer $TOKEN" \
+  -F 'file=@examples/road_network_bayrischzell_1.1.geojson'
+
+# Current state
+curl $API/networks/1/edges -H "Authorization: Bearer $TOKEN"
+
+# State as of a timestamp (ISO 8601, UTC)
+curl -G $API/networks/1/edges -H "Authorization: Bearer $TOKEN" \
+  --data-urlencode 'timestamp=2025-01-01T12:00:00Z'
 ```
 
----
+The edges endpoint returns a GeoJSON `FeatureCollection` whose features carry the edge `id`, `timestamp` and `is_current` flag. Try it interactively in the [live API docs](https://valantischatzimagkas.github.io/Road-Archiver/).
 
-# Getting Started - Interacting with the API
-Here we have a workflow of how one can interact with the API
+## Running tests
 
-**Create Account:** 
-<br><br>
-Click endpoint
-![Step 1](screenshots/create_account_step_1.png)
+```bash
+uv sync
+uv run pytest -q
+```
 
-Click on try it out
-![Step 2](screenshots/create_account_step_2.png)
+The suite uses `pytest-docker` to build and start the API and a PostGIS database from `tests/docker-compose.test.yml` (it publishes the API on host port 8000, so that port must be free), then exercises the HTTP API end to end. The first run takes a few minutes while the image builds.
 
-Enter your account details:
-![Step 3](screenshots/create_account_step_3.png)
+Lint with `uvx ruff@0.17.6 check .`.
 
-Create Account:
-![Step 4](screenshots/create_account_step_4.png)
+## Design decisions
 
-Scroll down and check results:
-![Step 5](screenshots/create_account_step_5.png)
+**Why PostGIS.** Edges are geometries. PostGIS stores them natively (`geometry(GEOMETRY, 4326)`) with a GiST spatial index, so the data is ready for spatial queries (bounding box, intersection, distance) without a data migration. Geometry is converted to and from GeoJSON with Shapely.
 
----
+**Edge versioning and point-in-time queries.** An update marks every current edge of the network as `is_current = false` and sets its `superseded_at`, then inserts the new file's features as new current edges, all with the same timestamp, in one transaction. Querying without a timestamp returns edges where `is_current` is true. Querying with a timestamp `T` returns edges where `timestamp <= T` and (`superseded_at` is null or `superseded_at > T`), i.e. the edges that were live at `T`.
 
-**Authenticate**
-We must authenticate ourselves to access some of the endpoints<br>
-To do so, scroll to the top of the documentation page and click here:
-![Step 6](screenshots/authenticate_step_1.png)
+**Role-based access.** Roles are `ADMIN`, `MODERATOR`, `USER` and `GUEST`. Today only `ADMIN` is treated differently: admins can read any user or network and delete users. Everyone else can only access their own data. Accessing another user's network returns 404 rather than 401/403, so network ids are not disclosed.
 
+**Migrations.** Alembic is the only source of schema truth. The API container runs `alembic upgrade head` before starting, and the initial migration enables the `postgis` extension. If you have a database created by an earlier version of this project (via `create_all`), it lacks the `superseded_at` column; recreate it, or add the column manually and run `alembic stamp head`.
 
-Fill in here your **email** and **password**
-![Step 7](screenshots/authenticate_step_2.png)
+## Limitations and roadmap
 
+Known limitations:
 
-Scroll down and click here:
-![Step 8](screenshots/authenticate_step_3.png)
+- Self-registration accepts any role, including `ADMIN`. This is a demo convenience and must be restricted before any real deployment.
+- An update replaces the whole network. Edges are not diffed, so unchanged edges are also re-inserted as new versions.
+- The edges endpoint returns geometry plus `id`, `timestamp` and `is_current`; the original road attributes (name, lanes, and so on) are stored but not returned.
+- The upload response does not include the new network id; use `GET /users/{id}/networks`.
+- No pagination, and no spatial filtering on retrieval.
+- `MODERATOR` and `GUEST` roles exist but carry no extra permissions.
+- The test suite shares one database and relies on sequential ids.
 
-Exit this window:
-![Step 9](screenshots/authenticate_step_4.png)
+Roadmap:
 
----
-
-**Upload a road network**
-So if everything was fine so far, lets try to upload a road network.<br>
-Scroll down until you see this, and click here:
-![Step 10](screenshots/Upload_road_network_step_1.png)
-
-Click on try it out
-![Step 11](screenshots/Upload_road_network_step_2.png)
-
-
-Click to browse and upload a road network file, it **must** be a `geojson` or a `json` 
-file that contains geojson data.
-![Step 12](screenshots/Upload_road_network_step_3.png)
-
-Execute the road network upload
-![Step 13](screenshots/Upload_road_network_step_4.png)
-
-Check results:
-![Step 14](screenshots/Upload_road_network_step_5.png)
-
----
-
-**Update a road network**
-Let's see the road networks our user has so that we can fetch a road network id
-
-Click here
-![Step 15](screenshots/Update_network_step_1.png)
-
-Click on try it out
-![Step 16](screenshots/Update_network_step_2.png)
-
-Enter user id, since it is the first user created in our demo, it has id=1
-![Step 17](screenshots/Update_network_step_3.png)
-
-Click to execute
-![Step 18](screenshots/Update_network_step_4.png)
-
-Observe the results and note down the network_id, which in this case is called id
-![Step 19](screenshots/Update_network_step_5.png)
-
-Click here
-![Step 20](screenshots/Update_network_step_6.png)
-
-Click on try it out
-![Step 21](screenshots/Update_network_step_7.png)
-
-Enter network id, browse file and execute the update
-![Step 22](screenshots/Update_network_step_8.png)
-
-Observe the results
-![Step 23](screenshots/Update_network_step_9.png)
-
-Finally, lets try the endpoint that we use to fetch a road network along with it's edges.
-By now, we covered how and where to click to use an endpoint.
-
-Enter the road network id you wish to fetch, be default if we put only the road network and not timestamp<br>
-We will receive the current version of the network.<br>
-If we provide a timestamp the endpoint will fetch everything from given timestamp and back in the past.
-
-![Step 24](screenshots/Get_road_network_1.png)
-
-Observe the results:
-![Step 25](screenshots/Get_road_network_2.png)
+- Return edge attributes and the new network id from upload.
+- Bounding-box filtering and pagination on the edges endpoint.
+- Diff-based updates that only version changed edges.
+- Admin-only role assignment.
 
 ## License
 

@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from geoalchemy2 import Geometry
@@ -19,7 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
-class UserRolesOptions(str, Enum):
+class UserRolesOptions(StrEnum):
     """
     ADMIN: 	Full control: manage users, system settings, content, etc
     MODERATOR: Limited admin: review/manage content or users (but not system settings)
@@ -58,7 +58,7 @@ class RoadNetwork(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(UTC), nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=False
@@ -87,7 +87,10 @@ class RoadEdge(Base):
     )
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(UTC), nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+    )
+    superseded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     network_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("road_networks.id"), nullable=False

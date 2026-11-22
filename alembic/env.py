@@ -1,20 +1,16 @@
-import os
-import sys
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 from app.core.config import settings
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from app.core.database import Base  # adjust path as needed
+from app.core.database import Base
+from app.db import models  # noqa: F401  (registers tables on Base.metadata)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DB_URL)
+config.set_main_option("sqlalchemy.url", settings.db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -78,10 +74,9 @@ def include_object(object, name, type_, reflected, compare_to):
                 return False
 
     # Exclude specific schemas
-    if hasattr(object, "schema") and object.schema in ("tiger", "topology", "postgis"):
-        return False
-
-    return True
+    return not (
+        hasattr(object, "schema") and object.schema in ("tiger", "topology", "postgis")
+    )
 
 
 # add your model's MetaData object here
@@ -107,7 +102,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        include_object=include_object,  # Add this line
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -131,7 +126,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            include_object=include_object,  # Add this line
+            include_object=include_object,
         )
 
         with context.begin_transaction():

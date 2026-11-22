@@ -112,3 +112,7 @@ crashlytics-build.properties
 Pipfile.lock
 
 mypy_html_report/*
+# Local environment and tooling
+.env
+.venv/
+.pytest_cache/

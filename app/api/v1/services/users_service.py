@@ -1,14 +1,14 @@
 from fastapi import HTTPException, status
 from pydantic import EmailStr
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, Query
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.core.security import Hasher
 from app.db.models import RoadNetwork, User, UserRolesOptions
 from app.schemas import CreateUser
 
 
-async def create_user(db: Session, request: CreateUser) -> User:
+def create_user(db: Session, request: CreateUser) -> User:
     try:
         new_user = User(
             username=request.username,
@@ -21,12 +21,18 @@ async def create_user(db: Session, request: CreateUser) -> User:
         db.commit()
         db.refresh(new_user)
         return new_user
-    except SQLAlchemyError as e:
+    except IntegrityError:
         db.rollback()
-        raise Exception(f"Failed to create user, {e}")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username or email already registered",
+        ) from None
+    except SQLAlchemyError:
+        db.rollback()
+        raise
 
 
-async def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
+def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
     try:
         user = db.query(User).filter_by(id=user_id).first()
 
@@ -49,10 +55,10 @@ async def get_user_by_id(db: Session, user_id: int, current_user: User) -> User:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
 
 
-async def get_road_networks_for_user(
+def get_road_networks_for_user(
     db: Session, user_id: int, current_user: User
 ) -> list[RoadNetwork]:  # More accurate than Query[RoadNetwork]
     try:
@@ -79,10 +85,10 @@ async def get_road_networks_for_user(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
 
 
-async def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]:
+def delete_user(db: Session, user_id: int, current_user: User) -> dict[str, str]:
     user = db.query(User).filter_by(id=user_id).first()
 
     if not user:
@@ -100,19 +106,13 @@ async def delete_user(db: Session, user_id: int, current_user: User) -> dict[str
     return {"detail": "User deleted successfully"}
 
 
-# for now, I use this for authenticating users, does not get used by a respective endpoint
-async def get_user_by_email(db: Session, email: EmailStr) -> User:
+# Used for authentication; no endpoint exposes it.
+def get_user_by_email(db: Session, email: EmailStr) -> User | None:
     try:
-        user = db.query(User).filter_by(email=email).first()
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
-        return user
+        return db.query(User).filter_by(email=email).first()
 
     except SQLAlchemyError:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred",
-        )
+        ) from None
