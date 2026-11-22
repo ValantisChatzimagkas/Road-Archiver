@@ -1,28 +1,21 @@
 FROM python:3.13-slim
 
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    POETRY_VERSION=1.8.2 \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_HOME="/opt/poetry" \
-    PATH="/opt/poetry/bin:$PATH" \
-    PIP_DEFAULT_TIMEOUT=300 \
-    POETRY_HTTP_TIMEOUT=300
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_COMPILE_BYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH"
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    build-essential \
-    libpq-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python3 - --yes
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock ./
-
-RUN poetry config virtualenvs.create false \
-    && poetry install --only main --no-root --no-cache
+# Dependencies first so this layer is cached until the lockfile changes.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev --no-install-project
 
 RUN useradd --create-home --uid 1000 appuser
 
@@ -32,8 +25,8 @@ USER appuser
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-ENTRYPOINT ["poetry", "run"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
+# Alembic is the single source of truth for the schema: migrate, then serve.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

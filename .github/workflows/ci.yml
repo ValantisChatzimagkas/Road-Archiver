@@ -7,16 +7,20 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.4.0
+      - name: Lint
+        run: uvx ruff@0.17.6 check .
+
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.11"
-      - name: Install Poetry
-        run: pipx install poetry
+      - uses: astral-sh/setup-uv@v10.4.0
       - name: Install dependencies
-        run: poetry install --no-root
+        run: uv sync --locked
       - name: Test (API + PostGIS via Docker Compose)
-        run: poetry run pytest -q
+        run: uv run pytest -q
