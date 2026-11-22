@@ -1,3 +1,13 @@
+# Road Archiver
+
+[![CI](https://github.com/ValantisChatzimagkas/Road-Archiver/actions/workflows/ci.yml/badge.svg)](https://github.com/ValantisChatzimagkas/Road-Archiver/actions/workflows/ci.yml)
+
+A REST API for managing versioned road networks. Upload GeoJSON road networks, push updates over time without losing history, and query any network as it existed at a given point in time.
+
+**Stack:** FastAPI · PostgreSQL + PostGIS · SQLAlchemy / GeoAlchemy2 · Alembic · JWT auth with role-based permissions · Docker Compose · pytest
+
+---
+
 # Task - Development of REST API for management of road networks
 The task is made up of three subtasks, all of which must be completed. The aim is to create a simple Rest API for managing road networks. Three example road networks (node-edge models) in GeoJSON format are attached for processing the task.
 
@@ -28,51 +38,30 @@ The edges of the road networks should be retrievable via an additional endpoint 
 # Getting started - Setup
 **Step 1 - clone project:**
 ```bash
-git clone git@github.com:ValantisChatzimagkas/submission-by-chrysovalantis-chatzimagkas.git
+git clone https://github.com/ValantisChatzimagkas/Road-Archiver.git
+cd Road-Archiver
 ```
 
 **Step 2 - build and run project with docker-compose:**
 ```
 docker compose up --build
 ```
+
+**Step 3 -  check the documentation**
+If everything went ok you can go to the home page at: [http://127.0.0.1:8000/](http://127.0.0.1:8000/) and there click the **Docs** link<br>
+Or you can directly access them from here: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+
 # Tests:
 
-To run all tests go at the root directory and run in the terminal:
-```commandline
-poetry lock
+The test suite spins up the API and a PostGIS database with Docker Compose (via `pytest-docker`).
+From the project root:
+```bash
+poetry install
+poetry run pytest
 ```
-
-And then you can run your tests:
-```commandline
-pytest
-```
-
-
-
-**Step 3 -  check the documentation**
-If everything went ok you can go to the home page at: [http://127.0.0.1:8000/](http://127.0.0.1:8000/) and there click the **Docs** link<br>
-Or you can directly access them from here: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-
-
 
 ---
-
-# Getting started - Setup
-**Step 1 - clone project:**
-```bash
-git clone git@github.com:ValantisChatzimagkas/submission-by-chrysovalantis-chatzimagkas.git
-```
-
-**Step 2 - build and run project with docker-compose:**
-```
-docker compose up --build
-```
-
-**Step 3 -  check the documentation**
-If everything went ok you can go to the home page at: [http://127.0.0.1:8000/](http://127.0.0.1:8000/) and there click the **Docs** link<br>
-Or you can directly access them from here: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
 
 # Getting Started - Interacting with the API
 Here we have a workflow of how one can interact with the API
@@ -176,3 +165,7 @@ If we provide a timestamp the endpoint will fetch everything from given timestam
 
 Observe the results:
 ![Step 25](screenshots/Get_road_network_2.png)
+
+## License
+
+[MIT](LICENSE)
